@@ -1,0 +1,28 @@
+# ─── OS / IDE ───
+.DS_Store
+.idea/
+.vscode/
+
+# ─── Env ───
+.env
+.env.*
+!.env.example
+
+# ─── Go ───
+backend/bin/
+backend/tmp/
+coverage.out
+
+# ─── Python ───
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# ─── Node ───
+node_modules/
+frontend/dist/
+
+# ─── Documentos privados de la prueba ───
+docs/requirements.pdf
+expected_results.csv
