@@ -30,3 +30,7 @@ migrate-down:
 
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) postgres "$(DATABASE_URL)" status
+
+#codegeneration
+sqlc:
+	cd backend && sqlc generate

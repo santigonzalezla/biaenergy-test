@@ -45,7 +45,7 @@ CREATE TYPE anomaly_status AS ENUM (
 CREATE TABLE app_user
 (
     uid_user          UUID PRIMARY KEY      DEFAULT gen_random_uuid(),
-    num_id_user       INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
+    num_id_user       INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
     str_email_user    VARCHAR(255) NOT NULL UNIQUE,
     str_password_user VARCHAR(255) NOT NULL,
     str_name_user     VARCHAR(120) NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE app_user
 CREATE TABLE meter
 (
     uid_meter                     UUID PRIMARY KEY          DEFAULT gen_random_uuid(),
-    num_id_meter                  INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
+    num_id_meter                  INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
     str_code_meter                VARCHAR(20)      NOT NULL,
     str_name_meter                VARCHAR(120)     NOT NULL,
     str_location_meter            VARCHAR(200)     NOT NULL DEFAULT '',
@@ -93,7 +93,7 @@ CREATE TABLE reading
 CREATE TABLE event
 (
     uid_event             UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
-    num_id_event          INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
+    num_id_event          INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
     uid_meter             UUID        NOT NULL REFERENCES meter (uid_meter) ON DELETE CASCADE,
     dtm_timestamp_event   TIMESTAMPTZ NOT NULL,
     str_type_event        event_type  NOT NULL,
@@ -107,7 +107,7 @@ CREATE TABLE event
 CREATE TABLE analysis
 (
     uid_analysis               UUID PRIMARY KEY         DEFAULT gen_random_uuid(),
-    num_id_analysis            INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
+    num_id_analysis            INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
     str_status_analysis        analysis_status NOT NULL DEFAULT 'PENDING',
     str_current_step_analysis  VARCHAR(40),
     num_progress_analysis      SMALLINT        NOT NULL DEFAULT 0,
@@ -128,7 +128,7 @@ CREATE TABLE analysis
 CREATE TABLE anomaly
 (
     uid_anomaly                    UUID PRIMARY KEY          DEFAULT gen_random_uuid(),
-    num_id_anomaly                 INTEGER GENERATED ALWAYS AS IDENTITY UNIQUE,
+    num_id_anomaly                 INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
     uid_analysis                   UUID             NOT NULL REFERENCES analysis (uid_analysis) ON DELETE CASCADE,
     uid_meter                      UUID             NOT NULL REFERENCES meter (uid_meter) ON DELETE CASCADE,
     uid_event                      UUID             REFERENCES event (uid_event) ON DELETE SET NULL,
