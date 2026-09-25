@@ -24,7 +24,7 @@ func NewRouter(allowedOrigins []string, modules ...RouteRegister) http.Handler {
 		AllowedOrigins: allowedOrigins,
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-Request-Id"},
-		ExposedHeaders: []string{"x-Request-Id"},
+		ExposedHeaders: []string{middleware.RequestIDHeader},
 		MaxAge:         300,
 	}))
 

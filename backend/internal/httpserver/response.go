@@ -12,10 +12,10 @@ import (
 const maxBodyBytes = 1 << 20
 
 type ErrorDetail struct {
-	Code string `json:"code"`
-	Message string `json:"message"`
-	Details any `json:"details,omitempty"`
-	Path string `json:"path"`
+	Code      string    `json:"code"`
+	Message   string    `json:"message"`
+	Details   any       `json:"details,omitempty"`
+	Path      string    `json:"path"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
@@ -23,7 +23,7 @@ type ErrorBody struct {
 	Error ErrorDetail `json:"error"`
 }
 
-func WriteJson(writer http.ResponseWriter, status int, data any) {
+func WriteJSON(writer http.ResponseWriter, status int, data any) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(status)
 
@@ -41,13 +41,13 @@ func WriteError(writer http.ResponseWriter, request *http.Request, err error) {
 		)
 	}
 
-	WriteJson(writer, appErr.Status, ErrorBody{
+	WriteJSON(writer, appErr.Status, ErrorBody{
 		Error: ErrorDetail{
-			Code: appErr.Code,
-			Message: appErr.Message,
-			Details: appErr.Details,
-			Path: request.URL.Path,
-			Timestamp: time.Now(),
+			Code:      appErr.Code,
+			Message:   appErr.Message,
+			Details:   appErr.Details,
+			Path:      request.URL.Path,
+			Timestamp: time.Now().UTC(),
 		},
 	})
 }

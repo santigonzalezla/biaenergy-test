@@ -36,7 +36,7 @@ func (handler *Handler) check(writer http.ResponseWriter, request *http.Request)
 	defer cancel()
 
 	if err := handler.db.Ping(ctx); err != nil {
-		httpserver.WriteJson(writer, http.StatusServiceUnavailable, response{
+		httpserver.WriteJSON(writer, http.StatusServiceUnavailable, response{
 			Status:   "degraded",
 			Database: "down",
 			Time:     time.Now().UTC(),
@@ -44,7 +44,7 @@ func (handler *Handler) check(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	httpserver.WriteJson(writer, http.StatusOK, response{
+	httpserver.WriteJSON(writer, http.StatusOK, response{
 		Status:   "ok",
 		Database: "up",
 		Time:     time.Now().UTC(),

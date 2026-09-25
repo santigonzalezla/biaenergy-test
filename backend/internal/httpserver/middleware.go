@@ -14,6 +14,8 @@ import (
 func RequestLogger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		start := time.Now()
+		requestID := middleware.GetReqID(request.Context())
+		writer.Header().Set(middleware.RequestIDHeader, requestID)
 		wrapped := middleware.NewWrapResponseWriter(writer, request.ProtoMajor)
 
 		next.ServeHTTP(wrapped, request)
@@ -23,7 +25,8 @@ func RequestLogger(next http.Handler) http.Handler {
 			"path", request.URL.Path,
 			"status", wrapped.Status(),
 			"duration_ms", time.Since(start).Milliseconds(),
-			"request_id", middleware.GetReqID(request.Context()),
+			"request_id", requestID,
+			"client_ip", middleware.GetClientIP(request.Context()),
 		)
 	})
 }
