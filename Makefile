@@ -3,7 +3,7 @@ export
 
 MIGRATIONS_DIR := backend/db/migrations
 
-.PHONY: db-up db-down db-reset db-psql migrate-new migrate-up migrate-down migrate-status
+.PHONY: db-up db-down db-reset db-psql migrate-new migrate-up migrate-down migrate-status sqlc dev
 
 #database
 db-up:
@@ -34,3 +34,7 @@ migrate-status:
 #codegeneration
 sqlc:
 	cd backend && sqlc generate
+
+#dev
+dev:
+	cd backend && air
