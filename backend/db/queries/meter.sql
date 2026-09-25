@@ -71,3 +71,9 @@ UPDATE meter
 SET dtm_deleted_at_meter = now()
 WHERE uid_meter = $1
   AND dtm_deleted_at_meter IS NULL;
+
+-- name: GetMeterByCode :one
+SELECT *
+FROM meter
+WHERE str_code_meter = $1
+  AND dtm_deleted_at_meter IS NULL;

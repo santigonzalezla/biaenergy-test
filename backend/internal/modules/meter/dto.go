@@ -11,6 +11,11 @@ import (
 
 var codePattern = regexp.MustCompile(`^[A-Z0-9-]{2,20}$`) // [2-20] - [mayus, num, hyph]
 
+// IsValidCode indica si un código de medidor ya normalizado (mayúsculas, sin espacios) cumple el formato
+func IsValidCode(code string) bool {
+	return codePattern.MatchString(code)
+}
+
 type CreateMeterRequest struct {
 	Code              string   `json:"code"`
 	Name              string   `json:"name"`

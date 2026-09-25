@@ -81,6 +81,34 @@ func (q *Queries) CreateMeter(ctx context.Context, arg CreateMeterParams) (Meter
 	return i, err
 }
 
+const getMeterByCode = `-- name: GetMeterByCode :one
+SELECT uid_meter, num_id_meter, str_code_meter, str_name_meter, str_location_meter, str_sector_meter, dec_nominal_voltage_meter, dec_max_current_meter, dec_contracted_power_kw_meter, str_status_meter, dtm_deleted_at_meter, dtm_created_at, dtm_updated_at
+FROM meter
+WHERE str_code_meter = $1
+  AND dtm_deleted_at_meter IS NULL
+`
+
+func (q *Queries) GetMeterByCode(ctx context.Context, strCodeMeter string) (Meter, error) {
+	row := q.db.QueryRow(ctx, getMeterByCode, strCodeMeter)
+	var i Meter
+	err := row.Scan(
+		&i.UidMeter,
+		&i.NumIDMeter,
+		&i.StrCodeMeter,
+		&i.StrNameMeter,
+		&i.StrLocationMeter,
+		&i.StrSectorMeter,
+		&i.DecNominalVoltageMeter,
+		&i.DecMaxCurrentMeter,
+		&i.DecContractedPowerKwMeter,
+		&i.StrStatusMeter,
+		&i.DtmDeletedAtMeter,
+		&i.DtmCreatedAt,
+		&i.DtmUpdatedAt,
+	)
+	return i, err
+}
+
 const getMeterByID = `-- name: GetMeterByID :one
 SELECT uid_meter, num_id_meter, str_code_meter, str_name_meter, str_location_meter, str_sector_meter, dec_nominal_voltage_meter, dec_max_current_meter, dec_contracted_power_kw_meter, str_status_meter, dtm_deleted_at_meter, dtm_created_at, dtm_updated_at
 FROM meter
