@@ -41,8 +41,8 @@ func TestLoad(t *testing.T) {
 		{
 			name: "Missing ALLOWED_ORIGINS in production",
 			env: map[string]string{
-				"DATABASE_URL": "postgres://localhost/db",
-				"APP_ENV":      "production",
+				"DATABASE_URL":    "postgres://localhost/db",
+				"APP_ENV":         "production",
 				"ALLOWED_ORIGINS": "",
 			},
 			wantErr: true,
@@ -50,8 +50,8 @@ func TestLoad(t *testing.T) {
 		{
 			name: "Missing ALLOWED_ORIGINS in production",
 			env: map[string]string{
-				"DATABASE_URL": "postgres://localhost/db",
-				"APP_ENV":      "production",
+				"DATABASE_URL":    "postgres://localhost/db",
+				"APP_ENV":         "production",
 				"ALLOWED_ORIGINS": "http://app.biaenergy.com",
 			},
 		},
@@ -84,14 +84,14 @@ func TestSplitAndTrim(t *testing.T) {
 			want:  []string{"http://localhost:5173"},
 		},
 		{
-			name: "With spaces",
+			name:  "With spaces",
 			input: " http://a.com , http://b.com ",
-			want: []string{"http://a.com", "http://b.com"},
+			want:  []string{"http://a.com", "http://b.com"},
 		},
 		{
-			name: "Empty doesn't generate empty origin",
+			name:  "Empty doesn't generate empty origin",
 			input: "",
-			want: []string{},
+			want:  []string{},
 		},
 	}
 

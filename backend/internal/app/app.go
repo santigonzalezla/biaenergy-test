@@ -34,10 +34,10 @@ func (app *App) Run(ctx context.Context) error {
 	}()
 
 	select {
-		case err := <- serverErr:
-			return fmt.Errorf("server failed: %w", err)
-		case <- ctx.Done():
-			slog.Info("shutdown signal received")
+	case err := <-serverErr:
+		return fmt.Errorf("server failed: %w", err)
+	case <-ctx.Done():
+		slog.Info("shutdown signal received")
 	}
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
