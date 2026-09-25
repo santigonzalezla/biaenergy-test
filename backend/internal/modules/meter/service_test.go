@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/apperror"
@@ -12,12 +13,18 @@ import (
 )
 
 type fakeRepository struct {
-	err          error
-	meter        db.Meter
-	called       bool
-	listParams   db.ListMetersParams
-	createParams db.CreateMeterParams
-	updateParams db.UpdateMeterParams
+	err            error
+	meter          db.Meter
+	called         bool
+	listParams     db.ListMetersParams
+	createParams   db.CreateMeterParams
+	updateParams   db.UpdateMeterParams
+	readings       []db.ListReadingsByMeterRow
+	events         []db.ListEventsByMeterRow
+	latestReading  time.Time
+	hasReadings    bool
+	readingsParams db.ListReadingsByMeterParams
+	eventsParams   db.ListEventsByMeterParams
 }
 
 func (fake *fakeRepository) List(ctx context.Context, params db.ListMetersParams) ([]db.Meter, int64, error) {
@@ -51,6 +58,22 @@ func (fake *fakeRepository) SoftDelete(ctx context.Context, id uuid.UUID) error 
 	fake.called = true
 
 	return fake.err
+}
+
+func (fake *fakeRepository) ListReadings(ctx context.Context, params db.ListReadingsByMeterParams) ([]db.ListReadingsByMeterRow, error) {
+	fake.readingsParams = params
+
+	return fake.readings, nil
+}
+
+func (fake *fakeRepository) ListEvents(ctx context.Context, params db.ListEventsByMeterParams) ([]db.ListEventsByMeterRow, error) {
+	fake.eventsParams = params
+
+	return fake.events, nil
+}
+
+func (fake *fakeRepository) LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
+	return fake.latestReading, fake.hasReadings, nil
 }
 
 func assertStatus(t *testing.T, err error, wantStatus int) {
@@ -256,4 +279,129 @@ func TestServiceErrorMapping(t *testing.T) {
 			assertStatus(t, deleteErr, tableTest.wantStatus)
 		})
 	}
+}
+
+func TestServiceSeriesRange(t *testing.T) {
+	day := 24 * time.Hour
+	// Última lectura del dataset: 14-sep 23:00 en Bogotá = 15-sep 04:00 UTC
+	latest := time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC)
+	anchor := time.Date(2026, 9, 12, 5, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name        string
+		query       SeriesQuery
+		hasReadings bool
+		meterErr    error
+		wantStatus  int
+		wantFrom    time.Time
+		wantTo      time.Time
+	}{
+		{
+			name:        "Default ends at the hour after the latest reading",
+			query:       SeriesQuery{},
+			hasReadings: true,
+			wantFrom:    time.Date(2026, 9, 8, 5, 0, 0, 0, time.UTC),
+			wantTo:      time.Date(2026, 9, 15, 5, 0, 0, 0, time.UTC),
+		},
+		{
+			name:     "Only from moves 7 days forward",
+			query:    SeriesQuery{From: &anchor},
+			wantFrom: anchor,
+			wantTo:   anchor.Add(7 * day),
+		},
+		{
+			name:     "Only to moves 7 days back",
+			query:    SeriesQuery{To: &anchor},
+			wantFrom: anchor.Add(-7 * day),
+			wantTo:   anchor,
+		},
+		{
+			name:     "Both dates are used as sent",
+			query:    SeriesQuery{From: timePtr(anchor.Add(-2 * day)), To: &anchor},
+			wantFrom: anchor.Add(-2 * day),
+			wantTo:   anchor,
+		},
+		{name: "From after to is rejected", query: SeriesQuery{From: &anchor, To: timePtr(anchor.Add(-day))}, wantStatus: http.StatusBadRequest},
+		{name: "Range above 31 days is rejected", query: SeriesQuery{From: timePtr(anchor.Add(-40 * day)), To: &anchor}, wantStatus: http.StatusBadRequest},
+		{name: "Missing meter is 404", query: SeriesQuery{}, meterErr: ErrNotFound, wantStatus: http.StatusNotFound},
+	}
+
+	for _, tableTest := range tests {
+		t.Run(tableTest.name, func(t *testing.T) {
+			repository := &fakeRepository{
+				err:           tableTest.meterErr,
+				latestReading: latest,
+				hasReadings:   tableTest.hasReadings,
+			}
+			service := NewService(repository)
+
+			response, err := service.ListReadings(context.Background(), uuid.New(), tableTest.query)
+
+			assertStatus(t, err, tableTest.wantStatus)
+
+			if tableTest.wantStatus != 0 {
+				return
+			}
+
+			params := repository.readingsParams
+
+			if !params.FromTime.Equal(tableTest.wantFrom) || !params.ToTime.Equal(tableTest.wantTo) {
+				t.Fatalf("range sent to repository = [%s, %s), want [%s, %s)",
+					params.FromTime.UTC(), params.ToTime.UTC(), tableTest.wantFrom, tableTest.wantTo)
+			}
+
+			if !response.From.Equal(tableTest.wantFrom) || !response.To.Equal(tableTest.wantTo) {
+				t.Fatalf("range in response = [%s, %s), want [%s, %s)", response.From, response.To, tableTest.wantFrom, tableTest.wantTo)
+			}
+
+			if response.Data == nil {
+				t.Fatal("data must be an empty slice, not nil (JSON [] instead of null)")
+			}
+		})
+	}
+}
+
+func TestServiceSeriesWithoutReadings(t *testing.T) {
+	repository := &fakeRepository{hasReadings: false}
+	service := NewService(repository)
+
+	before := time.Now()
+	response, err := service.ListReadings(context.Background(), uuid.New(), SeriesQuery{})
+
+	assertStatus(t, err, 0)
+
+	// Sin lecturas, la ventana termina en la hora siguiente a "ahora" y dura 7 días
+	if response.To.Before(before) || response.To.Sub(response.From) != 7*24*time.Hour {
+		t.Fatalf("range = [%s, %s), want 7 days ending after now", response.From, response.To)
+	}
+}
+
+func TestServiceListEvents(t *testing.T) {
+	eventTime := time.Date(2026, 9, 12, 19, 0, 0, 0, time.UTC)
+
+	repository := &fakeRepository{
+		hasReadings:   true,
+		latestReading: time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC),
+		events: []db.ListEventsByMeterRow{
+			{UidEvent: uuid.New(), DtmTimestampEvent: eventTime, StrTypeEvent: db.EventTypeUNKNOWN, StrDescriptionEvent: "No operational event reported"},
+		},
+	}
+	service := NewService(repository)
+
+	response, err := service.ListEvents(context.Background(), uuid.New(), SeriesQuery{})
+
+	assertStatus(t, err, 0)
+
+	// Mismo rango por defecto que las lecturas: los marcadores caen dentro de la gráfica
+	if !repository.eventsParams.ToTime.Equal(time.Date(2026, 9, 15, 5, 0, 0, 0, time.UTC)) {
+		t.Fatalf("events range to = %s, want same default as readings", repository.eventsParams.ToTime)
+	}
+
+	if len(response.Data) != 1 || response.Data[0].Type != db.EventTypeUNKNOWN || !response.Data[0].Timestamp.Equal(eventTime) {
+		t.Fatalf("unexpected events: %+v", response.Data)
+	}
+}
+
+func timePtr(value time.Time) *time.Time {
+	return &value
 }

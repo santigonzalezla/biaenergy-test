@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,9 @@ type Repository interface {
 	Create(ctx context.Context, params db.CreateMeterParams) (db.Meter, error)
 	Update(ctx context.Context, params db.UpdateMeterParams) (db.Meter, error)
 	SoftDelete(ctx context.Context, id uuid.UUID) error
+	ListReadings(ctx context.Context, params db.ListReadingsByMeterParams) ([]db.ListReadingsByMeterRow, error)
+	ListEvents(ctx context.Context, params db.ListEventsByMeterParams) ([]db.ListEventsByMeterRow, error)
+	LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error)
 }
 
 type PostgresRepository struct {
@@ -109,6 +113,41 @@ func (repository *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UU
 
 	return nil
 }
+
+func (repository *PostgresRepository) ListReadings(ctx context.Context, params db.ListReadingsByMeterParams) ([]db.ListReadingsByMeterRow, error) {
+	readings, err := repository.queries.ListReadingsByMeter(ctx, params)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list readings: %w", err)
+	}
+
+	return readings, nil
+}
+
+func (repository *PostgresRepository) ListEvents(ctx context.Context, params db.ListEventsByMeterParams) ([]db.ListEventsByMeterRow, error) {
+	events, err := repository.queries.ListEventsByMeter(ctx, params)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list events: %w", err)
+	}
+
+	return events, nil
+}
+
+func (repository *PostgresRepository) LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
+	latest, err := repository.queries.GetLatestReadingTime(ctx, id)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, false, nil
+	}
+
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("failed to get latest reading time: %w", err)
+	}
+
+	return latest, true, nil
+}
+
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 

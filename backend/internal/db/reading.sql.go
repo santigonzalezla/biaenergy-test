@@ -12,6 +12,24 @@ import (
 	"github.com/google/uuid"
 )
 
+const getLatestReadingTime = `-- name: GetLatestReadingTime :one
+SELECT dtm_timestamp_reading
+FROM reading
+WHERE uid_meter = $1
+ORDER BY dtm_timestamp_reading DESC
+LIMIT 1
+`
+
+// Fecha de la lectura más reciente de un medidor (para el rango por defecto de la gráfica).
+// ORDER BY ... DESC LIMIT 1 recorre el índice (uid_meter, dtm_timestamp_reading) desde el final: lee UNA sola fila.
+// Si el medidor no tiene lecturas, :one devuelve pgx.ErrNoRows.
+func (q *Queries) GetLatestReadingTime(ctx context.Context, uidMeter uuid.UUID) (time.Time, error) {
+	row := q.db.QueryRow(ctx, getLatestReadingTime, uidMeter)
+	var dtm_timestamp_reading time.Time
+	err := row.Scan(&dtm_timestamp_reading)
+	return dtm_timestamp_reading, err
+}
+
 const insertReadings = `-- name: InsertReadings :execrows
 INSERT INTO reading (uid_meter, dtm_timestamp_reading, dec_consumption_kwh_reading, dec_voltage_reading,
                      dec_current_reading, dec_power_factor_reading, str_status_reading)
@@ -51,4 +69,62 @@ func (q *Queries) InsertReadings(ctx context.Context, arg InsertReadingsParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const listReadingsByMeter = `-- name: ListReadingsByMeter :many
+SELECT dtm_timestamp_reading,
+       dec_consumption_kwh_reading,
+       dec_voltage_reading,
+       dec_current_reading,
+       dec_power_factor_reading,
+       str_status_reading
+FROM reading
+WHERE uid_meter = $1
+  AND dtm_timestamp_reading >= $2
+  AND dtm_timestamp_reading < $3
+ORDER BY dtm_timestamp_reading
+`
+
+type ListReadingsByMeterParams struct {
+	MeterID  uuid.UUID
+	FromTime time.Time
+	ToTime   time.Time
+}
+
+type ListReadingsByMeterRow struct {
+	DtmTimestampReading      time.Time
+	DecConsumptionKwhReading float64
+	DecVoltageReading        float64
+	DecCurrentReading        float64
+	DecPowerFactorReading    float64
+	StrStatusReading         string
+}
+
+// Lecturas de un medidor en el rango [from, to): incluye from, excluye to.
+// Usa el índice de uq_reading_meter_timestamp (uid_meter, dtm_timestamp_reading) → no recorre la tabla completa.
+func (q *Queries) ListReadingsByMeter(ctx context.Context, arg ListReadingsByMeterParams) ([]ListReadingsByMeterRow, error) {
+	rows, err := q.db.Query(ctx, listReadingsByMeter, arg.MeterID, arg.FromTime, arg.ToTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListReadingsByMeterRow
+	for rows.Next() {
+		var i ListReadingsByMeterRow
+		if err := rows.Scan(
+			&i.DtmTimestampReading,
+			&i.DecConsumptionKwhReading,
+			&i.DecVoltageReading,
+			&i.DecCurrentReading,
+			&i.DecPowerFactorReading,
+			&i.StrStatusReading,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

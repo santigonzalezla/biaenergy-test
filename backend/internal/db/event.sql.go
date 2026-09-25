@@ -41,3 +41,54 @@ func (q *Queries) InsertEvents(ctx context.Context, arg InsertEventsParams) (int
 	}
 	return result.RowsAffected(), nil
 }
+
+const listEventsByMeter = `-- name: ListEventsByMeter :many
+SELECT uid_event,
+       dtm_timestamp_event,
+       str_type_event,
+       str_description_event
+FROM event
+WHERE uid_meter = $1
+  AND dtm_timestamp_event >= $2
+  AND dtm_timestamp_event < $3
+ORDER BY dtm_timestamp_event
+`
+
+type ListEventsByMeterParams struct {
+	MeterID  uuid.UUID
+	FromTime time.Time
+	ToTime   time.Time
+}
+
+type ListEventsByMeterRow struct {
+	UidEvent            uuid.UUID
+	DtmTimestampEvent   time.Time
+	StrTypeEvent        EventType
+	StrDescriptionEvent string
+}
+
+// Eventos de un medidor en el rango [from, to), para los marcadores de la gráfica
+func (q *Queries) ListEventsByMeter(ctx context.Context, arg ListEventsByMeterParams) ([]ListEventsByMeterRow, error) {
+	rows, err := q.db.Query(ctx, listEventsByMeter, arg.MeterID, arg.FromTime, arg.ToTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEventsByMeterRow
+	for rows.Next() {
+		var i ListEventsByMeterRow
+		if err := rows.Scan(
+			&i.UidEvent,
+			&i.DtmTimestampEvent,
+			&i.StrTypeEvent,
+			&i.StrDescriptionEvent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

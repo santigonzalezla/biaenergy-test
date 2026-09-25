@@ -11,7 +11,6 @@ import (
 
 var codePattern = regexp.MustCompile(`^[A-Z0-9-]{2,20}$`) // [2-20] - [mayus, num, hyph]
 
-// IsValidCode indica si un código de medidor ya normalizado (mayúsculas, sin espacios) cumple el formato
 func IsValidCode(code string) bool {
 	return codePattern.MatchString(code)
 }
@@ -130,4 +129,58 @@ func toMeterResponses(meters []db.Meter) []MeterResponse {
 	}
 
 	return responses
+}
+
+type SeriesResponse[T any] struct {
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
+	Data []T       `json:"data"`
+}
+
+type ReadingResponse struct {
+	Timestamp      time.Time `json:"timestamp"`
+	ConsumptionKwh float64   `json:"consumptionKwh"`
+	Voltage        float64   `json:"voltage"`
+	Current        float64   `json:"current"`
+	PowerFactor    float64   `json:"powerFactor"`
+	Status         string    `json:"status"`
+}
+
+type EventResponse struct {
+	ID          uuid.UUID    `json:"id"`
+	Timestamp   time.Time    `json:"timestamp"`
+	Type        db.EventType `json:"type"`
+	Description string       `json:"description"`
+}
+
+func toReadingResponses(rows []db.ListReadingsByMeterRow) []ReadingResponse {
+	readings := make([]ReadingResponse, 0, len(rows))
+
+	for _, row := range rows {
+		readings = append(readings, ReadingResponse{
+			Timestamp:      row.DtmTimestampReading.UTC(),
+			ConsumptionKwh: row.DecConsumptionKwhReading,
+			Voltage:        row.DecVoltageReading,
+			Current:        row.DecCurrentReading,
+			PowerFactor:    row.DecPowerFactorReading,
+			Status:         row.StrStatusReading,
+		})
+	}
+
+	return readings
+}
+
+func toEventResponses(rows []db.ListEventsByMeterRow) []EventResponse {
+	events := make([]EventResponse, 0, len(rows))
+
+	for _, row := range rows {
+		events = append(events, EventResponse{
+			ID:          row.UidEvent,
+			Timestamp:   row.DtmTimestampEvent.UTC(),
+			Type:        row.StrTypeEvent,
+			Description: row.StrDescriptionEvent,
+		})
+	}
+
+	return events
 }

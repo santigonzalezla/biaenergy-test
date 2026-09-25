@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/apperror"
@@ -15,6 +16,8 @@ const (
 	defaultNominalVoltage = 220
 	defaultSector         = "INDUSTRIAL"
 	defaultSortBy         = "code"
+	defaultSeriesWindow   = 7 * 24 * time.Hour
+	maxSeriesWindow       = 31 * 24 * time.Hour
 )
 
 var sorteableFields = map[string]bool{
@@ -30,6 +33,11 @@ type ListQuery struct {
 	Search   string
 	SortBy   string
 	SortDesc bool
+}
+
+type SeriesQuery struct {
+	From *time.Time
+	To   *time.Time
 }
 
 type Service struct {
@@ -164,6 +172,100 @@ func (service *Service) Update(ctx context.Context, id uuid.UUID, request Update
 
 func (service *Service) Delete(ctx context.Context, id uuid.UUID) error {
 	return mapError(service.repository.SoftDelete(ctx, id))
+}
+
+func (service *Service) ListReadings(ctx context.Context, id uuid.UUID, query SeriesQuery) (SeriesResponse[ReadingResponse], error) {
+	from, to, err := service.resolveRange(ctx, id, query)
+
+	if err != nil {
+		return SeriesResponse[ReadingResponse]{}, err
+	}
+
+	rows, err := service.repository.ListReadings(ctx, db.ListReadingsByMeterParams{
+		MeterID:  id,
+		FromTime: from,
+		ToTime:   to,
+	})
+
+	if err != nil {
+		return SeriesResponse[ReadingResponse]{}, err
+	}
+
+	return SeriesResponse[ReadingResponse]{
+		From: from.UTC(),
+		To:   to.UTC(),
+		Data: toReadingResponses(rows),
+	}, nil
+}
+
+func (service *Service) ListEvents(ctx context.Context, id uuid.UUID, query SeriesQuery) (SeriesResponse[EventResponse], error) {
+	from, to, err := service.resolveRange(ctx, id, query)
+
+	if err != nil {
+		return SeriesResponse[EventResponse]{}, err
+	}
+
+	rows, err := service.repository.ListEvents(ctx, db.ListEventsByMeterParams{
+		MeterID:  id,
+		FromTime: from,
+		ToTime:   to,
+	})
+
+	if err != nil {
+		return SeriesResponse[EventResponse]{}, err
+	}
+
+	return SeriesResponse[EventResponse]{
+		From: from.UTC(),
+		To:   to.UTC(),
+		Data: toEventResponses(rows),
+	}, nil
+}
+
+func (service *Service) resolveRange(ctx context.Context, id uuid.UUID, query SeriesQuery) (time.Time, time.Time, error) {
+	if _, err := service.repository.GetById(ctx, id); err != nil {
+		return time.Time{}, time.Time{}, mapError(err)
+	}
+
+	var from, to time.Time
+
+	switch {
+	case query.From != nil && query.To != nil:
+		from, to = *query.From, *query.To
+	case query.From != nil:
+		from = *query.From
+		to = from.Add(defaultSeriesWindow)
+	case query.To != nil:
+		to = *query.To
+		from = to.Add(-defaultSeriesWindow)
+	default:
+		latest, ok, err := service.repository.LatestReadingTime(ctx, id)
+
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		if !ok {
+			latest = time.Now()
+		}
+
+		to = latest.Truncate(time.Hour).Add(time.Hour)
+		from = to.Add(-defaultSeriesWindow)
+	}
+
+	errs := map[string]string{}
+
+	if !from.Before(to) {
+		errs["from"] = "must be before to"
+	} else if to.Sub(from) > maxSeriesWindow {
+		errs["to"] = "range must be 31 days max"
+	}
+
+	if len(errs) > 0 {
+		return time.Time{}, time.Time{}, apperror.Validation(errs)
+	}
+
+	return from, to, nil
 }
 
 func mapError(err error) error {

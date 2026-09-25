@@ -3,6 +3,7 @@ package meter
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -27,6 +28,8 @@ func (handler *Handler) RegisterRoutes(route chi.Router) {
 			meter.Get("/", handler.get)
 			meter.Patch("/", handler.update)
 			meter.Delete("/", handler.delete)
+			meter.Get("/readings", handler.listReadings)
+			meter.Get("/events", handler.listEvents)
 		})
 	})
 }
@@ -123,6 +126,56 @@ func (handler *Handler) delete(writer http.ResponseWriter, request *http.Request
 	writer.WriteHeader(http.StatusNoContent)
 }
 
+func (handler *Handler) listReadings(writer http.ResponseWriter, request *http.Request) {
+	id, err := parseMeterID(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	query, err := parseSeriesQuery(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	series, err := handler.service.ListReadings(request.Context(), id, query)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	httpserver.WriteJSON(writer, http.StatusOK, series)
+}
+
+func (handler *Handler) listEvents(writer http.ResponseWriter, request *http.Request) {
+	id, err := parseMeterID(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	query, err := parseSeriesQuery(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	series, err := handler.service.ListEvents(request.Context(), id, query)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	httpserver.WriteJSON(writer, http.StatusOK, series)
+}
+
 func parseMeterID(request *http.Request) (uuid.UUID, error) {
 	id, err := uuid.Parse(chi.URLParam(request, "meterId"))
 
@@ -175,4 +228,35 @@ func parseListQuery(request *http.Request) (ListQuery, error) {
 	}
 
 	return query, nil
+}
+
+func parseSeriesQuery(request *http.Request) (SeriesQuery, error) {
+	values := request.URL.Query()
+	errs := map[string]string{}
+
+	query := SeriesQuery{
+		From: parseOptionalTime(values.Get("from"), "from", errs),
+		To:   parseOptionalTime(values.Get("to"), "to", errs),
+	}
+
+	if len(errs) > 0 {
+		return SeriesQuery{}, apperror.Validation(errs)
+	}
+
+	return query, nil
+}
+
+func parseOptionalTime(raw, field string, errs map[string]string) *time.Time {
+	if raw == "" {
+		return nil
+	}
+
+	value, err := time.Parse(time.RFC3339, raw)
+
+	if err != nil {
+		errs[field] = "must be an RFC339 date as YYYY-MM-DDTHH:MM:SSZ"
+		return nil
+	}
+
+	return &value
 }
