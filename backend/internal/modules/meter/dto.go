@@ -112,8 +112,8 @@ func toMeterResponse(meter db.Meter) MeterResponse {
 		MaxCurrent:        meter.DecMaxCurrentMeter,
 		ContractedPowerKw: meter.DecContractedPowerKwMeter,
 		Status:            meter.StrStatusMeter,
-		CreatedAt:         meter.DtmCreatedAt,
-		UpdatedAt:         meter.DtmUpdatedAt,
+		CreatedAt:         meter.DtmCreatedAt.UTC(),
+		UpdatedAt:         meter.DtmUpdatedAt.UTC(),
 	}
 }
 

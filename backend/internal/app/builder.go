@@ -11,6 +11,7 @@ import (
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/config"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/httpserver"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/meter"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/platform/database"
 )
 
@@ -53,7 +54,12 @@ func (builder *Builder) WithModules() *Builder {
 		return builder
 	}
 
-	builder.modules = append(builder.modules, health.NewHandler(builder.pool))
+	meterRepository := meter.NewPostgresRepository(builder.pool)
+
+	builder.modules = append(builder.modules,
+		health.NewHandler(builder.pool),
+		meter.NewHandler(meter.NewService(meterRepository)),
+	)
 
 	return builder
 }
