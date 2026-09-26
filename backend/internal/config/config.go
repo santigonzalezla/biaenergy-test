@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -15,6 +16,8 @@ type Config struct {
 	DatabaseUrl    string
 	AllowedOrigins []string
 	Location       *time.Location
+	AiServiceUrl   string
+	AiTimeout      time.Duration
 }
 
 func Load() (Config, error) {
@@ -25,6 +28,7 @@ func Load() (Config, error) {
 		Port:           getEnv("API_PORT", "8080"),
 		DatabaseUrl:    getEnv("DATABASE_URL", ""),
 		AllowedOrigins: splitAndTrim(getEnv("ALLOWED_ORIGINS", "")),
+		AiServiceUrl:   getEnv("AI_SERVICE_URL", "http://localhost:8000"),
 	}
 
 	if cfg.DatabaseUrl == "" {
@@ -46,7 +50,32 @@ func Load() (Config, error) {
 	}
 	cfg.Location = location
 
+	if cfg.IsProduction() && os.Getenv("AI_SERVICE_URL") == "" {
+		errs = append(errs, errors.New("AI_SERVICE_URL is required in production"))
+	}
+
+	if !isHTTPURL(cfg.AiServiceUrl) {
+		errs = append(errs, fmt.Errorf("AI_SERVICE_URL must be an http(s) URL: %q", cfg.AiServiceUrl))
+	}
+
+	aiTimeout, err := time.ParseDuration(getEnv("AI_TIMEOUT", "2m"))
+
+	if err != nil || aiTimeout <= 0 {
+		errs = append(errs, fmt.Errorf("AI_TIMEOUT must be a positive duration like 90s or 2m: %q", getEnv("AI_TIMEOUT", "2m")))
+	}
+	cfg.AiTimeout = aiTimeout
+
 	return cfg, errors.Join(errs...)
+}
+
+func isHTTPURL(raw string) bool {
+	parsed, err := url.ParseRequestURI(raw)
+
+	if err != nil {
+		return false
+	}
+
+	return (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != ""
 }
 
 func (config Config) IsProduction() bool {

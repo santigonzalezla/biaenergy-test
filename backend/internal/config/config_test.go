@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
@@ -48,12 +51,47 @@ func TestLoad(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "Missing ALLOWED_ORIGINS in production",
+			name: "Valid production configuration",
 			env: map[string]string{
 				"DATABASE_URL":    "postgres://localhost/db",
 				"APP_ENV":         "production",
-				"ALLOWED_ORIGINS": "http://app.biaenergy.com",
+				"ALLOWED_ORIGINS": "https://app.biaenergy.com",
+				"AI_SERVICE_URL":  "http://ai-service.railway.internal:8000",
 			},
+		},
+		{
+			name: "Missing AI_SERVICE_URL in production",
+			env: map[string]string{
+				"DATABASE_URL":    "postgres://localhost/db",
+				"APP_ENV":         "production",
+				"ALLOWED_ORIGINS": "https://app.biaenergy.com",
+				"AI_SERVICE_URL":  "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "AI_SERVICE_URL without scheme",
+			env: map[string]string{
+				"DATABASE_URL":   "postgres://localhost/db",
+				"AI_SERVICE_URL": "ai-service:8000",
+			},
+			wantErr: true,
+		},
+		{
+			name: "AI_TIMEOUT that is not a duration",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/db",
+				"AI_TIMEOUT":   "120",
+			},
+			wantErr: true,
+		},
+		{
+			name: "AI_TIMEOUT that is not positive",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/db",
+				"AI_TIMEOUT":   "0s",
+			},
+			wantErr: true,
 		},
 	}
 
@@ -109,5 +147,24 @@ func TestSplitAndTrim(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestLoadAIServiceDefaults(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/db")
+	t.Setenv("AI_SERVICE_URL", "")
+	t.Setenv("AI_TIMEOUT", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.AiServiceUrl != "http://localhost:8000" {
+		t.Fatalf("AiServiceUrl = %q, want the local default", cfg.AiServiceUrl)
+	}
+
+	if cfg.AiTimeout != 2*time.Minute {
+		t.Fatalf("AiTimeout = %v, want 2m", cfg.AiTimeout)
 	}
 }
