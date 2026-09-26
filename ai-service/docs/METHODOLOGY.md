@@ -138,3 +138,42 @@ fin:         la primera hora que vuelve a superar el 50% (recuperación)
 **Calibración con el dataset:** en los medidores normales, el consumo nunca baja del **85%** de lo esperado. La caída de M-106 se mantiene entre el **17% y el 21%**. El umbral del 50% queda con amplio margen respecto a ambos grupos.
 
 **Resultado:** una sola caída, en M-106: del 8-sep 00:00 al 8-sep 12:00 (**12 horas**, ~80% por debajo de lo esperado). Coincide exactamente con el evento `SCHEDULED_OUTAGE` ("Scheduled maintenance outage for 12 hours"). El detector **no decide** que sea un falso positivo: solo reporta la caída y su duración. Esa conclusión es de la clasificación, que la cruza con el evento.
+
+### 3.3 Voltaje: fuera de tolerancia e inestabilidad
+
+**Principio eléctrico.** El voltaje lo impone la **red**, no la carga: con una alimentación sana se mantiene cerca de su valor nominal aunque el consumo cambie. Por eso un voltaje anómalo apunta a un problema de **suministro** o, si el consumo se mantiene estable, de **medición** (sensor, transformador de medida, conexiones). A diferencia del consumo, aquí la referencia **no es el baseline del medidor sino su especificación**: el voltaje nominal (`nominalVoltage`, 220 V por defecto).
+
+El detector busca dos fallas distintas, que producen dos tipos de señal:
+
+**a) Fuera de tolerancia (`VOLTAGE_OUT_OF_RANGE`)**
+
+```
+lectura fuera de tolerancia:  |voltaje − nominal| / nominal > 5%     → a 220 V: fuera de [209, 231] V
+señal:                        ≥ 3 lecturas fuera de tolerancia
+magnitud:                     la mayor desviación, en % del nominal
+```
+
+±5% es la tolerancia de servicio habitual en las normas de suministro (por ejemplo, ANSI C84.1, rango A). Algunas normas nacionales admiten un margen mayor por debajo del nominal; ±5% es un criterio conservador que no afecta el resultado en este dataset, donde los medidores sanos se mantienen entre 216 y 225 V.
+
+**b) Inestabilidad (`VOLTAGE_INSTABILITY`)**
+
+```
+salto:     |voltaje_t − voltaje_{t−1}| > 5% del nominal     → a 220 V: más de 11 V de una hora a la siguiente
+señal:     ≥ 3 saltos
+magnitud:  el mayor salto (V), comparado con el paso típico (mediana de los pasos)
+```
+
+Mide la **variabilidad entre horas consecutivas**, no el nivel. Detecta un voltaje que oscila aunque cada lectura, por separado, pudiera estar dentro de la tolerancia. Una red real no alterna decenas de voltios de una hora a otra con una carga estable: ese patrón es típico de una conexión intermitente o de un sensor defectuoso.
+
+**Duración del episodio.** Como las fallas son intermitentes (alternan lecturas buenas y malas), un episodio se considera **activo** si la última ocurrencia está dentro de las últimas 24 h de datos. Si no, se cierra una hora después de la última ocurrencia.
+
+**Umbrales relativos al nominal.** Tolerancia y salto se expresan en % del voltaje nominal del medidor, así el mismo detector sirve para medidores de 120, 220 o 440 V.
+
+**Calibración y resultado con el dataset:**
+
+| | Lecturas fuera de ±5% | Saltos > 11 V | Salto máximo | Paso típico |
+|---|---|---|---|---|
+| 11 medidores sanos | 0 | 0 | 4,6 – 5,6 V | ~1,5 V |
+| M-112 | **16** (peor: 241,2 V, +9,6%) | **32** | **25,5 V** | 1,7 V |
+
+Todo ocurre el 13 y 14 de septiembre, en coincidencia con el evento `DATA_QUALITY` del 13-sep ("Intermittent readings and abnormal electrical jumps"). El episodio sigue activo al final de los datos.
