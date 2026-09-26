@@ -1,0 +1,25 @@
+[project]
+name = "biaenergy-ai-service"
+version = "0.1.0"
+description = "Explainable anomaly detection engine for energy meters"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
