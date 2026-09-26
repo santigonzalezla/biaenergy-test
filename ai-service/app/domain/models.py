@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from app.domain.enums import AnomalyType, EventType, Severity, SignalKind
@@ -20,7 +20,7 @@ class MeterInput(ApiModel):
 
 class ReadingInput(ApiModel):
     meter_id: str
-    timestamp: datetime
+    timestamp: AwareDatetime
     consumption_kwh: float = Field(ge=0)
     voltage: float = Field(ge=0)
     current: float = Field(ge=0)
@@ -30,7 +30,7 @@ class ReadingInput(ApiModel):
 class EventInput(ApiModel):
     id: str
     meter_id: str
-    timestamp: datetime
+    timestamp: AwareDatetime
     type: EventType
     description: str = ""
 
