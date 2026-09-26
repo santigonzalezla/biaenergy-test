@@ -8,7 +8,7 @@ def test_defaults_when_nothing_is_set():
 
     assert settings.port == 8000
     assert settings.timezone == "America/Bogota"
-    assert settings.llm_model == "claude-opus-5"
+    assert settings.llm_model == "claude-sonnet-5"
     assert not settings.llm_enabled
     assert not settings.is_production
 

@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-DEFAULT_LLM_MODEL = "claude-opus-5"
+DEFAULT_LLM_MODEL = "claude-sonnet-5"
 
 
 class ConfigError(ValueError):
