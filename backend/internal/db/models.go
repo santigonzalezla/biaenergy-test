@@ -436,6 +436,7 @@ type Anomaly struct {
 	DtmDetectedAtAnomaly        time.Time
 	DtmCreatedAt                time.Time
 	DtmUpdatedAt                time.Time
+	StrRuleIDAnomaly            string
 }
 
 type AppUser struct {
