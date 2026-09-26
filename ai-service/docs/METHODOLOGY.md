@@ -80,3 +80,41 @@ Con 7 días de baseline, cada hora tiene **7 muestras**. La MAD por hora mide la
 ### Referencias eléctricas
 
 Además del consumo, el baseline guarda la **mediana** de voltaje, corriente y factor de potencia de la ventana de referencia. M-109: 219,7 V · 195,9 A · PF 0,94. Los detectores eléctricos comparan contra estos valores.
+
+## 3. Detectores
+
+Cada detector busca **un tipo de hecho** y produce **señales** (`Signal`). Un detector no clasifica: solo observa. La clasificación combina señales y contexto. Todos implementan la misma interfaz (`Detector.detect(series) -> list[Signal]`), lo que permite añadir detectores nuevos sin modificar los existentes.
+
+### 3.1 Aumento sostenido de consumo (CUSUM)
+
+**Objetivo:** detectar un **cambio de nivel sostenido** (M-109, M-104) y **el momento exacto** en que empezó, ignorando picos aislados y la variación normal.
+
+**Principio: CUSUM** (*Cumulative Sum*, Page, 1954), técnica clásica de control estadístico de procesos. En lugar de evaluar cada lectura por separado, **acumula** las desviaciones: un pico aislado suma poco y se "disipa", mientras que un desplazamiento sostenido suma hora tras hora hasta cruzar un umbral.
+
+```
+desviación relativa:  d_t = (consumo_t − esperado_t) / esperado_t
+suma acumulada:       S_t = max(0, S_{t−1} + d_t − k)
+alarma cuando:        S_t > h
+```
+
+- `esperado_t` es la mediana del baseline para **la misma hora local** (sección 2).
+- `k` (*drift*) es la desviación "tolerada" por hora: lo que la resta impide acumular. Se fija en la **mitad del cambio mínimo que interesa detectar** (regla estándar de diseño de CUSUM, `k = δ/2`): para cambios ≥ 25%, `k = 0,125`.
+- `max(0, ...)` reinicia la suma cuando el consumo vuelve a lo normal, así el ruido no se acumula indefinidamente.
+- `h = 1,0`: la alarma salta cuando el exceso acumulado sobre la tolerancia equivale al 100% de una hora de consumo.
+- **Punto de cambio:** la primera hora del tramo en que `S` dejó de ser 0 y creció sin interrupción hasta la alarma.
+
+**Por qué desviación relativa (%) y no z-score.** La versión clásica normaliza por el ruido (`d_t / σ`). Se probó con los datos reales y falló: los perfiles horarios son tan regulares (ruido ≈ 1 kWh) que variaciones irrelevantes del 1–3% acumulaban alarmas en 10 de 12 medidores, y M-109 se detectaba 3 días antes de su salto real. Expresar la desviación en **porcentaje del esperado** alinea el detector con la pregunta de negocio ("¿subió el consumo un 25% o más?") y hace el umbral comparable entre medidores grandes y pequeños.
+
+**Validaciones posteriores**, para confirmar que el cambio es real y sostenido:
+- el tramo desde el punto de cambio dura **al menos 24 h**;
+- la mediana del consumo en ese tramo supera la mediana esperada en **al menos un 25%**.
+
+**Resultado con el dataset:**
+
+| Medidor | Punto de cambio | Variación | CUSUM máximo |
+|---|---|---|---|
+| M-109 | 12-sep 14:00 | +116,9% | 1,01 (alarma) |
+| M-104 | 11-sep 00:00 | +49,0% | 1,02 (alarma) |
+| Resto | — | — | ≤ 0,09 |
+
+Los puntos de cambio coinciden **exactamente** con los eventos registrados (`UNKNOWN` de M-109 y `OPERATIONAL_CHANGE` de M-104), y los medidores normales quedan un orden de magnitud por debajo del umbral.

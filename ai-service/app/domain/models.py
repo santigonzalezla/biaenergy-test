@@ -45,7 +45,8 @@ class AnalysisRequest(ApiModel):
 # Output
 class Signal(ApiModel):
     kind: SignalKind
-    detected_at: datetime
+    started_at: datetime
+    ended_at: datetime | None
     magnitude: float
     baseline_value: float
     observed_value: float
