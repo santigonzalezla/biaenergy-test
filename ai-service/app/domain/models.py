@@ -60,6 +60,13 @@ class ChangedVariable(ApiModel):
     change_pct: float
 
 
+class EventReference(ApiModel):
+    id: str
+    type: EventType
+    timestamp: datetime
+    description: str
+
+
 class Finding(ApiModel):
     meter_id: str
     meter_code: str
@@ -76,7 +83,7 @@ class Finding(ApiModel):
     variation_pct: float
     changed_variables: list[ChangedVariable]
     signals: list[Signal]
-    related_event_id: str | None
+    related_event: EventReference | None
     reason: str = ""
     recommended_action: str = ""
 

@@ -403,3 +403,21 @@ Para cada medidor, el pipeline ejecuta los cinco detectores, correlaciona cada s
 | 4 | M-106 | `FALSE_POSITIVE` | LOW | R2 | 0,80 | 0,6 | −79,8% durante 12 h, recuperado |
 
 Los 8 medidores restantes no generan hallazgos.
+
+## 8. Explicación y recomendación
+
+**Principio: el texto se deriva de la evidencia, nunca al revés.** Cada hallazgo llega a la etapa de explicación ya clasificado, puntuado y con toda su evidencia (cifras, variables que cambiaron, evento relacionado). El redactor solo convierte esa evidencia en lenguaje claro para el operador.
+
+**Redactor por plantillas (proveedor por defecto).** Hay una plantilla por regla de clasificación (`ruleId`), que construye:
+
+- **`reason`:** qué pasó, desde cuándo y con qué magnitud; si hay o no una causa conocida (citando el registro de evento); y la evidencia física que sostiene la conclusión.
+- **`recommendedAction`:** una acción concreta y coherente con el tipo de hallazgo.
+
+| Tipo | Acción recomendada |
+|---|---|
+| Anomalía real (aumento) | Inspeccionar con prioridad motores, compresores y banco de condensadores; confirmar si hubo un cambio no registrado; mantenimiento correctivo |
+| Calidad de datos | Revisar **el medidor** (conexiones, transformadores de medida, sensor) y marcar sus lecturas como no confiables |
+| Anomalía explicable | Validar el nuevo nivel con operación y actualizar el baseline |
+| Falso positivo | Ninguna acción correctiva; registrar como mantenimiento programado |
+
+Las fechas se expresan en la zona horaria del sitio y los números con coma decimal. Las plantillas son **deterministas**: la misma evidencia produce siempre el mismo texto, no dependen de servicios externos y garantizan que el análisis siempre se complete. Un proveedor LLM puede reemplazarlas para obtener una redacción más natural, con las plantillas como respaldo si el LLM no está disponible.

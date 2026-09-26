@@ -20,6 +20,7 @@ from app.domain.models import (
     AnalysisResult,
     ChangedVariable,
     EventInput,
+    EventReference,
     Explanation,
     Finding,
     Signal,
@@ -97,7 +98,7 @@ class AnomalyAnalyzer:
             variation_pct=round(percent_change(expected_kwh, observed_kwh), 1),
             changed_variables=[_changed_variable(signal) for signal in signals],
             signals=signals,
-            related_event_id=related_event.id if related_event else None,
+            related_event=_event_reference(related_event) if related_event else None,
         )
 
         explanation = self._explainer.explain(finding)
@@ -113,6 +114,10 @@ def _consumption_in_window(series: MeterSeries, start: datetime, end: datetime |
     expected = sum(series.expected_kwh(reading) for reading in window) / len(window)
     observed = sum(reading.consumption_kwh for reading in window) / len(window)
     return expected, observed
+
+
+def _event_reference(event: EventInput) -> EventReference:
+    return EventReference(id=event.id, type=event.type, timestamp=event.timestamp, description=event.description)
 
 
 def _changed_variable(signal: Signal) -> ChangedVariable:

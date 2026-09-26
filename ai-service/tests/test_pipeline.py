@@ -54,7 +54,7 @@ def test_m109_finding_carries_the_full_evidence(analysis):
     assert finding.variation_pct > 100
     assert finding.current_kwh > finding.baseline_kwh
     assert finding.window_end is None
-    assert finding.related_event_id is not None
+    assert finding.related_event.description == "No operational event reported"
     assert {variable.name for variable in finding.changed_variables} == {"consumption_kwh", "power_factor", "current"}
 
 
