@@ -215,3 +215,36 @@ El umbral de 0,80 marca un PF **claramente anormal** para una instalación indus
 | M-112 | 0,95 | 0,65 (−31,7%) | 0,58 | 12 de 45 (desde 13-sep 03:00) | **27%** |
 
 **La evidencia clave de M-109.** Compárese con M-104, que también aumentó su consumo (+49%) por una nueva línea de producción: su PF se mantiene en su rango normal (≥ 0,86). **Más producción con equipos sanos no degrada el PF**. En M-109, el consumo se duplica **y a la vez** el PF cae desde la misma hora. Esa combinación es la firma de un equipo que trabaja mal, no de una planta que produce más.
+
+### 3.5 Sobrecorriente
+
+**Principio eléctrico.** Como `P = V × I × PF`, la corriente sube cuando sube la potencia **o** cuando baja el factor de potencia:
+
+```
+I = P / (V × PF)
+```
+
+Conductores, interruptores y transformadores se dimensionan para una corriente máxima. Superar de forma sostenida la corriente que la instalación maneja habitualmente implica calentamiento, envejecimiento acelerado del aislamiento, riesgo de disparo de protecciones y, en el peor caso, de falla.
+
+**Referencia: el pico histórico, no la mediana.** La corriente sigue el ciclo diario del consumo (M-109: mediana de 196 A, pero 242 A en su turno normal). Comparar contra la mediana marcaría cada mediodía como sobrecorriente. La pregunta correcta es si circula **más corriente que la máxima que la instalación manejó en su período normal** (su demanda máxima):
+
+```
+límite:     1,5 × pico histórico de la semana de referencia
+señal:      ≥ 3 lecturas por encima del límite
+magnitud:   variación de la mediana de esas lecturas respecto a la referencia
+```
+
+Si el medidor tiene una **corriente máxima nominal** configurada (`maxCurrent`), esa especificación reemplaza al pico histórico como límite: es la capacidad física real del equipo.
+
+**Resultado con el dataset:**
+
+| | Pico en baseline | Máximo posterior | Relación | Lecturas sobre el límite |
+|---|---|---|---|---|
+| 9 medidores sanos | — | — | ≈ 1,0× | 0 |
+| M-112 | 156 A | 218 A | 1,39× | 0 |
+| M-104 | 264 A | 388 A | 1,47× | 0 |
+| M-109 | 242 A | **507 A** | **2,10×** | **46**, desde el 12-sep 14:00 |
+
+M-109 supera el límite (363 A) en 46 horas; la mediana de esas horas es 485 A, **el doble** de su pico histórico. Son 46 y no las 58 horas del salto porque, de madrugada, la carga base sigue por debajo del límite aunque también esté elevada.
+
+**Límite de este criterio (M-104).** La nueva línea de producción de M-104 lleva su corriente a 1,47× su pico, cerca del umbral. Es coherente: +47% de producción exige más corriente. El detector de sobrecorriente no es el que distingue a M-104 de M-109; esa distinción la dan el factor de potencia (sección 3.4) y la correlación con eventos. Si M-104 cruzara el umbral, su clasificación no cambiaría, porque su aumento está explicado por un `OPERATIONAL_CHANGE`.
