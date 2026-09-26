@@ -248,3 +248,33 @@ Si el medidor tiene una **corriente máxima nominal** configurada (`maxCurrent`)
 M-109 supera el límite (363 A) en 46 horas; la mediana de esas horas es 485 A, **el doble** de su pico histórico. Son 46 y no las 58 horas del salto porque, de madrugada, la carga base sigue por debajo del límite aunque también esté elevada.
 
 **Límite de este criterio (M-104).** La nueva línea de producción de M-104 lleva su corriente a 1,47× su pico, cerca del umbral. Es coherente: +47% de producción exige más corriente. El detector de sobrecorriente no es el que distingue a M-104 de M-109; esa distinción la dan el factor de potencia (sección 3.4) y la correlación con eventos. Si M-104 cruzara el umbral, su clasificación no cambiaría, porque su aumento está explicado por un `OPERATIONAL_CHANGE`.
+
+## 4. Correlación con eventos
+
+**Principio.** Una desviación solo es una anomalía si **no tiene explicación**. Los eventos operativos que registra la planta aportan ese contexto: el motor cruza cada señal con los eventos del **mismo medidor** para decidir si lo observado estaba previsto.
+
+**Ventana temporal:** un evento se relaciona con una señal si ocurre dentro de **±6 horas** de su inicio. En el dataset, siete de las ocho señales comienzan a la misma hora que su evento; la octava (PF bajo de M-112) aparece 3 horas después, porque las fallas intermitentes tardan en manifestarse. La ventana cubre ese desfase sin relacionar sucesos de días distintos.
+
+**Qué evento explica qué señal:**
+
+| Señal | Eventos que la explican |
+|---|---|
+| Aumento de consumo | `OPERATIONAL_CHANGE` (nueva línea, cambio de turno, ampliación) |
+| Caída de consumo | `SCHEDULED_OUTAGE`, `MAINTENANCE` |
+| Señales eléctricas (voltaje, PF, corriente) | Ninguno: un evento no hace "normal" un voltaje de 241 V |
+
+- La relación es **específica**: un corte programado no explica un aumento de consumo. Un evento del tipo equivocado cercano no basta.
+- **`UNKNOWN` no explica nada.** Un registro de "No operational event reported" confirma justamente lo contrario: la planta **no** tiene una causa conocida para lo ocurrido. Es la clave de M-109.
+- **`DATA_QUALITY` se relaciona, pero no explica.** No convierte las lecturas en normales; confirma que el problema está en la **medición**. La clasificación lo usa como evidencia de apoyo.
+- Si hay varios eventos cercanos, se prefiere el que **explica** la señal y, entre iguales, el más cercano en el tiempo.
+
+**Consistencia de duración.** Cuando el evento anuncia una duración ("... for 12 hours") y la señal ya terminó, se comparan ambas con una tolerancia de ±1 h. Que un corte anunciado de 12 horas coincida con una caída observada de 12 horas es evidencia fuerte de que se trata exactamente del evento planificado; si la caída hubiera durado 20 horas, algo más habría ocurrido y la explicación sería solo parcial.
+
+**Resultado con el dataset:**
+
+| Medidor | Señal | Evento relacionado | ¿Explica? | Duración |
+|---|---|---|---|---|
+| M-104 | Aumento +49% | `OPERATIONAL_CHANGE` (misma hora) | **Sí** | — |
+| M-106 | Caída de 12 h | `SCHEDULED_OUTAGE` "for 12 hours" (misma hora) | **Sí** | **Coincide** |
+| M-109 | Aumento, PF bajo, sobrecorriente | `UNKNOWN` "No operational event reported" | **No** | — |
+| M-112 | Voltaje fuera de rango e inestable, PF bajo | `DATA_QUALITY` | No (confirma problema de medición) | — |
