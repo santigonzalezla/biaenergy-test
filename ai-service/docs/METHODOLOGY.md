@@ -375,3 +375,31 @@ prioridad = 100 × tipo × severidad × impacto × confianza × actividad
 M-109 encabeza la lista con casi **tres veces** el puntaje del segundo. El orden refleja el criterio operativo: primero la falla real sin explicar (cuesta dinero y puede empeorar), después el medidor cuyas lecturas no son confiables, después el cambio explicado que solo requiere validación, y al final el corte programado, que no requiere acción.
 
 **Nota sobre los pesos.** Los pesos codifican un criterio de negocio (qué atender primero), no una propiedad estadística. Se eligieron para reflejar ese orden de atención y están centralizados en `scoring.py`, de modo que un operador pueda ajustarlos sin tocar los detectores ni las reglas.
+
+## 7. Pipeline: del dato al hallazgo
+
+```
+Lecturas → Baseline → Detección → Correlación con eventos → Clasificación → Puntuación → Explicación → Hallazgos ordenados
+ (§2)        (§2)       (§3)            (§4)                     (§5)           (§6)        (LLM / plantillas)
+```
+
+Para cada medidor, el pipeline ejecuta los cinco detectores, correlaciona cada señal con los eventos del medidor, clasifica con las reglas y puntúa cada clasificación. Los hallazgos de todos los medidores se ordenan por **prioridad** descendente.
+
+**Cifras de cada hallazgo:**
+
+- **Ventana:** desde la señal más temprana del hallazgo hasta el fin de la señal principal; abierta si sigue activa.
+- **Consumo base frente a actual:** el **promedio** del consumo esperado (baseline de la misma hora local) frente al consumo real, dentro de esa ventana. Se usa el promedio, y no la mediana, porque estas cifras representan energía total (kWh) y deben ser comparables con las del backend (`fn_meter_consumption_stats`): para M-109, el motor obtiene +110,5% y el backend +109,8%.
+- **Variables que cambiaron:** una por señal, con su valor de referencia y el observado (consumo, voltaje, paso de voltaje entre horas, factor de potencia, corriente).
+
+**La explicación va al final y no decide nada.** El texto (`reason`, `recommendedAction`) se genera cuando el hallazgo ya está clasificado y puntuado. El proveedor de texto (plantillas o LLM) recibe el hallazgo completo y solo lo redacta; no puede cambiar el tipo, la severidad ni la prioridad.
+
+**Resultado final con el dataset** (ordenado por prioridad):
+
+| # | Medidor | Tipo | Severidad | Regla | Confianza | Prioridad | Consumo |
+|---|---|---|---|---|---|---|---|
+| 1 | M-109 | `REAL_ANOMALY` | HIGH | R4 | 0,90 | 90,0 | +110,5%, activo desde 12-sep 14:00 |
+| 2 | M-112 | `DATA_QUALITY` | HIGH | R1 | 0,90 | 31,5 | +0,5% (estable), activo desde 13-sep |
+| 3 | M-104 | `EXPLAINABLE_ANOMALY` | MEDIUM | R3 | 0,70 | 12,5 | +46,5%, activo desde 11-sep |
+| 4 | M-106 | `FALSE_POSITIVE` | LOW | R2 | 0,80 | 0,6 | −79,8% durante 12 h, recuperado |
+
+Los 8 medidores restantes no generan hallazgos.

@@ -77,6 +77,11 @@ class Finding(ApiModel):
     changed_variables: list[ChangedVariable]
     signals: list[Signal]
     related_event_id: str | None
+    reason: str = ""
+    recommended_action: str = ""
+
+
+class Explanation(ApiModel):
     reason: str
     recommended_action: str
 
