@@ -21,5 +21,18 @@ services:
       timeout: 5s
       retries: 10
 
+  ai-service:
+    build: ./ai-service
+    container_name: biaenergy-ai-service
+    restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      PORT: 8000
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-claude-sonnet-5}
+    ports:
+      - "${AI_SERVICE_PORT:-8000}:8000"
+
 volumes:
   pgdata:
