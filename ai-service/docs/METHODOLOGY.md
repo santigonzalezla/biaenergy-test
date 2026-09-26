@@ -165,7 +165,7 @@ magnitud:  el mayor salto (V), comparado con el paso típico (mediana de los pas
 
 Mide la **variabilidad entre horas consecutivas**, no el nivel. Detecta un voltaje que oscila aunque cada lectura, por separado, pudiera estar dentro de la tolerancia. Una red real no alterna decenas de voltios de una hora a otra con una carga estable: ese patrón es típico de una conexión intermitente o de un sensor defectuoso.
 
-**Duración del episodio.** Como las fallas son intermitentes (alternan lecturas buenas y malas), un episodio se considera **activo** si la última ocurrencia está dentro de las últimas 24 h de datos. Si no, se cierra una hora después de la última ocurrencia.
+**Duración del episodio.** Como las fallas son intermitentes (alternan lecturas buenas y malas), un episodio se considera **activo** si la última ocurrencia está dentro de las últimas 24 h de datos. Si no, se cierra una hora después de la última ocurrencia. Esta regla es común a los detectores eléctricos (`intermittent_episode_end`).
 
 **Umbrales relativos al nominal.** Tolerancia y salto se expresan en % del voltaje nominal del medidor, así el mismo detector sirve para medidores de 120, 220 o 440 V.
 
@@ -177,3 +177,41 @@ Mide la **variabilidad entre horas consecutivas**, no el nivel. Detecta un volta
 | M-112 | **16** (peor: 241,2 V, +9,6%) | **32** | **25,5 V** | 1,7 V |
 
 Todo ocurre el 13 y 14 de septiembre, en coincidencia con el evento `DATA_QUALITY` del 13-sep ("Intermittent readings and abnormal electrical jumps"). El episodio sigue activo al final de los datos.
+
+### 3.4 Factor de potencia bajo
+
+**Principio eléctrico.** En corriente alterna, no toda la corriente que circula hace trabajo útil:
+
+```
+potencia aparente  S = V × I            (kVA)  lo que la red debe entregar
+potencia activa    P = V × I × PF       (kW)   lo que hace trabajo útil (y se mide en kWh)
+potencia reactiva  Q = √(S² − P²)       (kvar) la que magnetiza motores y transformadores
+factor de potencia PF = P / S = cos φ          fracción útil de la corriente (0 a 1)
+```
+
+Las cargas **inductivas** (motores, compresores, bombas) necesitan energía reactiva para crear su campo magnético; los **bancos de condensadores** la compensan. Un PF bajo significa que, para entregar la misma energía útil, circula más corriente: más pérdidas en los cables, transformadores más cargados y, habitualmente, **recargos de la distribuidora por energía reactiva** (en Colombia, la regulación cobra la reactiva que excede el 50% de la activa, equivalente a PF ≈ 0,89).
+
+Un PF que **cae de forma brusca** en un equipo que antes era estable suele indicar un **motor sobrecargado o con fallas**, o un **banco de condensadores dañado o desconectado**.
+
+**Regla:**
+
+```
+lectura con PF bajo:   PF < 0,80
+señal:                 ≥ 3 lecturas con PF bajo
+magnitud:              variación de la mediana del PF bajo respecto al PF del baseline
+persistencia:          lecturas con PF bajo / horas transcurridas desde la primera
+```
+
+El umbral de 0,80 marca un PF **claramente anormal** para una instalación industrial compensada, con margen respecto al mínimo de los medidores sanos (0,86).
+
+**Persistencia: continuo frente a intermitente.** Además de *cuánto* baja el PF, importa *cómo*: un PF bajo en **todas** las horas desde que empezó describe un equipo en falla sostenida; un PF bajo **salteado** entre horas normales es más propio de un problema de medición. El detector reporta ese porcentaje como evidencia para la clasificación.
+
+**Resultado con el dataset:**
+
+| | PF baseline | PF observado (mediana) | Mínimo | Horas con PF < 0,80 | Persistencia |
+|---|---|---|---|---|---|
+| 10 medidores sanos | 0,91 – 0,96 | — | ≥ 0,86 | 0 | — |
+| M-109 | 0,94 | 0,74 (−21,3%) | 0,71 | 58 de 58 (desde 12-sep 14:00) | **100%** |
+| M-112 | 0,95 | 0,65 (−31,7%) | 0,58 | 12 de 45 (desde 13-sep 03:00) | **27%** |
+
+**La evidencia clave de M-109.** Compárese con M-104, que también aumentó su consumo (+49%) por una nueva línea de producción: su PF se mantiene en su rango normal (≥ 0,86). **Más producción con equipos sanos no degrada el PF**. En M-109, el consumo se duplica **y a la vez** el PF cae desde la misma hora. Esa combinación es la firma de un equipo que trabaja mal, no de una planta que produce más.

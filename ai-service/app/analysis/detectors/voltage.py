@@ -1,7 +1,7 @@
-from datetime import datetime, timedelta
 from itertools import pairwise
 from statistics import median
 
+from app.analysis.detectors.base import intermittent_episode_end
 from app.analysis.series import MeterSeries
 from app.analysis.stats import percent_change
 from app.domain.enums import SignalKind
@@ -10,7 +10,6 @@ from app.domain.models import ReadingInput, Signal
 TOLERANCE_PCT = 5.0
 MAX_STEP_PCT = 5.0
 MIN_OCCURRENCES = 3
-ACTIVE_WINDOW = timedelta(hours=24)
 
 
 class VoltageDetector:
@@ -34,7 +33,7 @@ class VoltageDetector:
         return Signal(
             kind=SignalKind.VOLTAGE_OUT_OF_RANGE,
             started_at=outside[0].timestamp,
-            ended_at=self._episode_end(series, outside[-1].timestamp),
+            ended_at=intermittent_episode_end(series, outside[-1].timestamp),
             magnitude=round(deviation, 1),
             baseline_value=nominal,
             observed_value=worst.voltage,
@@ -57,7 +56,7 @@ class VoltageDetector:
         return Signal(
             kind=SignalKind.VOLTAGE_INSTABILITY,
             started_at=jumps[0][0].timestamp,
-            ended_at=self._episode_end(series, jumps[-1][0].timestamp),
+            ended_at=intermittent_episode_end(series, jumps[-1][0].timestamp),
             magnitude=round(largest, 1),
             baseline_value=round(typical, 2),
             observed_value=round(largest, 2),
@@ -66,9 +65,3 @@ class VoltageDetector:
                 f"(largest {largest:.1f} V, typical step {typical:.1f} V)"
             ),
         )
-
-    @staticmethod
-    def _episode_end(series: MeterSeries, last_occurrence: datetime) -> datetime | None:
-        if series.last_timestamp - last_occurrence <= ACTIVE_WINDOW:
-            return None
-        return last_occurrence + timedelta(hours=1)
