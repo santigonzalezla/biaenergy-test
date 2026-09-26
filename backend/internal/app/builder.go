@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/config"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/httpserver"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/dashboard"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/meter"
@@ -61,6 +62,7 @@ func (builder *Builder) WithModules() *Builder {
 		health.NewHandler(builder.pool),
 		meter.NewHandler(meter.NewService(meterRepository)),
 		ingestion.NewHandler(ingestion.NewService(ingestion.NewPostgresRepository(builder.pool), builder.cfg.Location)),
+		dashboard.NewHandler(dashboard.NewService(dashboard.NewPostgresRepository(builder.pool))),
 	)
 
 	return builder

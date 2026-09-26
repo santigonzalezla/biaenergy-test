@@ -35,6 +35,8 @@ type PostgresRepository struct {
 	queries *db.Queries
 }
 
+var _ Repository = (*PostgresRepository)(nil)
+
 func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{queries: db.New(pool)}
 }
