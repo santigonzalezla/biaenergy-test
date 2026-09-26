@@ -89,6 +89,15 @@ func (request UpdateMeterRequest) Validate() map[string]string {
 	return errs
 }
 
+type StatsResponse struct {
+	BaselineKwh    float64   `json:"baselineKwh"`
+	RecentKwh      float64   `json:"recentKwh"`
+	VariationPct   float64   `json:"variationPct"`
+	MinPowerFactor float64   `json:"minPowerFactor"`
+	TotalKwh       float64   `json:"totalKwh"`
+	LastReadingAt  time.Time `json:"lastReadingAt"`
+}
+
 type MeterResponse struct {
 	ID                uuid.UUID      `json:"id"`
 	NumID             int32          `json:"numId"`
@@ -102,6 +111,8 @@ type MeterResponse struct {
 	Status            db.MeterStatus `json:"status"`
 	CreatedAt         time.Time      `json:"createdAt"`
 	UpdatedAt         time.Time      `json:"updatedAt"`
+
+	Stats *StatsResponse `json:"stats"`
 }
 
 func toMeterResponse(meter db.Meter) MeterResponse {
@@ -183,4 +194,15 @@ func toEventResponses(rows []db.ListEventsByMeterRow) []EventResponse {
 	}
 
 	return events
+}
+
+func toStatsResponse(row db.GetMeterConsumptionStatsRow) *StatsResponse {
+	return &StatsResponse{
+		BaselineKwh:    row.BaselineAvgKwh,
+		RecentKwh:      row.RecentAvgKwh,
+		VariationPct:   row.VariationPct,
+		MinPowerFactor: row.MinPowerFactor,
+		TotalKwh:       row.TotalKwh,
+		LastReadingAt:  row.LastReadingAt.UTC(),
+	}
 }

@@ -25,6 +25,8 @@ type fakeRepository struct {
 	hasReadings    bool
 	readingsParams db.ListReadingsByMeterParams
 	eventsParams   db.ListEventsByMeterParams
+	stats          []db.GetMeterConsumptionStatsRow
+	statsErr       error
 }
 
 func (fake *fakeRepository) List(ctx context.Context, params db.ListMetersParams) ([]db.Meter, int64, error) {
@@ -74,6 +76,10 @@ func (fake *fakeRepository) ListEvents(ctx context.Context, params db.ListEvents
 
 func (fake *fakeRepository) LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
 	return fake.latestReading, fake.hasReadings, nil
+}
+
+func (fake *fakeRepository) ConsumptionStats(ctx context.Context, params db.GetMeterConsumptionStatsParams) ([]db.GetMeterConsumptionStatsRow, error) {
+	return fake.stats, fake.statsErr
 }
 
 func assertStatus(t *testing.T, err error, wantStatus int) {
@@ -404,4 +410,80 @@ func TestServiceListEvents(t *testing.T) {
 
 func timePtr(value time.Time) *time.Time {
 	return &value
+}
+
+func TestServiceListAttachesStats(t *testing.T) {
+	meterID := uuid.New()
+	lastReading := time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC)
+
+	statsOf := func(id uuid.UUID) db.GetMeterConsumptionStatsRow {
+		return db.GetMeterConsumptionStatsRow{
+			UidMeter:       id,
+			BaselineAvgKwh: 43.7,
+			RecentAvgKwh:   91.69,
+			VariationPct:   109.8,
+			MinPowerFactor: 0.708,
+			TotalKwh:       17526.04,
+			LastReadingAt:  lastReading,
+		}
+	}
+
+	tests := []struct {
+		name       string
+		stats      []db.GetMeterConsumptionStatsRow
+		statsErr   error
+		wantStatus int
+		wantStats  bool
+	}{
+		// Si attachStats recorriera con `for _, response := range` (copias), Stats quedaría en nil y este caso fallaría
+		{name: "Meter with readings gets its stats", stats: []db.GetMeterConsumptionStatsRow{statsOf(meterID)}, wantStats: true},
+		{name: "Stats of other meters are not mixed", stats: []db.GetMeterConsumptionStatsRow{statsOf(uuid.New())}, wantStats: false},
+		{name: "Meter without readings has nil stats", stats: nil, wantStats: false},
+		{name: "Stats query failure is 500", statsErr: errors.New("connection refused"), wantStatus: http.StatusInternalServerError},
+	}
+
+	for _, tableTest := range tests {
+		t.Run(tableTest.name, func(t *testing.T) {
+			repository := &fakeRepository{
+				meter:    db.Meter{UidMeter: meterID, StrCodeMeter: "M-109", StrStatusMeter: db.MeterStatusOK},
+				stats:    tableTest.stats,
+				statsErr: tableTest.statsErr,
+			}
+			service := NewService(repository)
+
+			page, err := service.List(context.Background(), ListQuery{})
+
+			assertStatus(t, err, tableTest.wantStatus)
+
+			if tableTest.wantStatus != 0 {
+				return
+			}
+
+			stats := page.Data[0].Stats
+
+			if !tableTest.wantStats {
+				if stats != nil {
+					t.Fatalf("stats = %+v, want nil", stats)
+				}
+				return
+			}
+
+			if stats == nil {
+				t.Fatal("stats = nil, want the meter's stats attached")
+			}
+
+			want := StatsResponse{
+				BaselineKwh:    43.7,
+				RecentKwh:      91.69,
+				VariationPct:   109.8,
+				MinPowerFactor: 0.708,
+				TotalKwh:       17526.04,
+				LastReadingAt:  lastReading,
+			}
+
+			if *stats != want {
+				t.Fatalf("stats = %+v, want %+v", *stats, want)
+			}
+		})
+	}
 }

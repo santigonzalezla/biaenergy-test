@@ -18,6 +18,13 @@ const (
 	defaultSortBy         = "code"
 	defaultSeriesWindow   = 7 * 24 * time.Hour
 	maxSeriesWindow       = 31 * 24 * time.Hour
+	statsBaselineDays     = 7
+	statsRecentHours      = 48
+)
+
+var (
+	statsFrom = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	statsTo   = time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC)
 )
 
 var sorteableFields = map[string]bool{
@@ -91,8 +98,14 @@ func (service *Service) List(ctx context.Context, query ListQuery) (pagination.P
 		return pagination.Page[MeterResponse]{}, err
 	}
 
+	responses := toMeterResponses(meters)
+
+	if err := service.attachStats(ctx, responses); err != nil {
+		return pagination.Page[MeterResponse]{}, err
+	}
+
 	return pagination.Page[MeterResponse]{
-		Data:  toMeterResponses(meters),
+		Data:  responses,
 		Total: total,
 		Page:  page,
 		Limit: limit,
@@ -266,6 +279,35 @@ func (service *Service) resolveRange(ctx context.Context, id uuid.UUID, query Se
 	}
 
 	return from, to, nil
+}
+
+func (service *Service) attachStats(ctx context.Context, responses []MeterResponse) error {
+	if len(responses) == 0 {
+		return nil
+	}
+
+	rows, err := service.repository.ConsumptionStats(ctx, db.GetMeterConsumptionStatsParams{
+		FromTime:     statsFrom,
+		ToTime:       statsTo,
+		BaselineDays: statsBaselineDays,
+		RecentHours:  statsRecentHours,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	statsByMeter := make(map[uuid.UUID]*StatsResponse, len(rows))
+
+	for _, row := range rows {
+		statsByMeter[row.UidMeter] = toStatsResponse(row)
+	}
+
+	for i := range responses {
+		responses[i].Stats = statsByMeter[responses[i].ID]
+	}
+
+	return nil
 }
 
 func mapError(err error) error {

@@ -29,6 +29,7 @@ type Repository interface {
 	ListReadings(ctx context.Context, params db.ListReadingsByMeterParams) ([]db.ListReadingsByMeterRow, error)
 	ListEvents(ctx context.Context, params db.ListEventsByMeterParams) ([]db.ListEventsByMeterRow, error)
 	LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error)
+	ConsumptionStats(ctx context.Context, params db.GetMeterConsumptionStatsParams) ([]db.GetMeterConsumptionStatsRow, error)
 }
 
 type PostgresRepository struct {
@@ -148,6 +149,16 @@ func (repository *PostgresRepository) LatestReadingTime(ctx context.Context, id 
 	}
 
 	return latest, true, nil
+}
+
+func (repository *PostgresRepository) ConsumptionStats(ctx context.Context, params db.GetMeterConsumptionStatsParams) ([]db.GetMeterConsumptionStatsRow, error) {
+	stats, err := repository.queries.GetMeterConsumptionStats(ctx, params)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get meter consumption stats: %w", err)
+	}
+
+	return stats, nil
 }
 
 func isUniqueViolation(err error) bool {
