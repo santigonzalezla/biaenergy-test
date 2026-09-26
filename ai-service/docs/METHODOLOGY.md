@@ -118,3 +118,23 @@ alarma cuando:        S_t > h
 | Resto | — | — | ≤ 0,09 |
 
 Los puntos de cambio coinciden **exactamente** con los eventos registrados (`UNKNOWN` de M-109 y `OPERATIONAL_CHANGE` de M-104), y los medidores normales quedan un orden de magnitud por debajo del umbral.
+
+### 3.2 Caída de consumo (rachas consecutivas)
+
+**Objetivo:** detectar períodos en que el medidor consume **muy por debajo** de lo normal (M-106) y registrar **cuándo empezó y cuándo se recuperó**.
+
+**Principio: detección por rachas** (*run-length*). Una hora baja aislada puede ser ruido o un corte breve de la red; varias horas **consecutivas** bajas indican un estado distinto del equipo (apagado, mantenimiento, falla). Exigir una racha mínima filtra los eventos triviales sin necesidad de promediar.
+
+```
+hora baja:   consumo_t < 50% × esperado_t
+caída:       ≥ 3 horas bajas consecutivas
+fin:         la primera hora que vuelve a superar el 50% (recuperación)
+```
+
+- Se compara contra el baseline **de la misma hora local**, igual que el detector de aumentos: consumir poco de madrugada es normal, a mediodía no.
+- A diferencia de CUSUM, aquí interesa la **duración exacta**, no solo el inicio: registra `started_at` y `ended_at` (la hora de recuperación, con el mismo criterio de intervalo semiabierto `[inicio, fin)` del backend). Si la caída sigue activa al final de los datos, `ended_at` queda vacío.
+- Un medidor puede tener **varias caídas** separadas; cada una produce su propia señal.
+
+**Calibración con el dataset:** en los medidores normales, el consumo nunca baja del **85%** de lo esperado. La caída de M-106 se mantiene entre el **17% y el 21%**. El umbral del 50% queda con amplio margen respecto a ambos grupos.
+
+**Resultado:** una sola caída, en M-106: del 8-sep 00:00 al 8-sep 12:00 (**12 horas**, ~80% por debajo de lo esperado). Coincide exactamente con el evento `SCHEDULED_OUTAGE` ("Scheduled maintenance outage for 12 hours"). El detector **no decide** que sea un falso positivo: solo reporta la caída y su duración. Esa conclusión es de la clasificación, que la cruza con el evento.
