@@ -36,3 +36,12 @@ FROM reading
 WHERE uid_meter = $1
 ORDER BY dtm_timestamp_reading DESC
 LIMIT 1;
+
+-- name: GetEarliestReadingTime :one
+-- Fecha de la primera lectura del medidor: ancla del período "normal" (baseline) del perfil horario.
+-- Mismo patrón que GetLatestReadingTime, en orden ascendente: lee UNA fila del índice.
+SELECT dtm_timestamp_reading
+FROM reading
+WHERE uid_meter = $1
+ORDER BY dtm_timestamp_reading
+LIMIT 1;

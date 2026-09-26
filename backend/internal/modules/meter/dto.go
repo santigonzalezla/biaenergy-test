@@ -206,3 +206,30 @@ func toStatsResponse(row db.GetMeterConsumptionStatsRow) *StatsResponse {
 		LastReadingAt:  row.LastReadingAt.UTC(),
 	}
 }
+
+type HourlyValue struct {
+	Hour    int32   `json:"hour"`
+	AvgKwh  float64 `json:"avgKwh"`
+	Samples int64   `json:"samples"`
+}
+
+type ProfileResponse struct {
+	From     time.Time     `json:"from"`
+	To       time.Time     `json:"to"`
+	Timezone string        `json:"timezone"`
+	Hours    []HourlyValue `json:"hours"`
+}
+
+func toHourlyValues(rows []db.GetMeterHourlyProfileRow) []HourlyValue {
+	values := make([]HourlyValue, 0, len(rows))
+
+	for _, row := range rows {
+		values = append(values, HourlyValue{
+			Hour:    row.HourOfDay,
+			AvgKwh:  row.AvgKwh,
+			Samples: row.ReadingsCount,
+		})
+	}
+
+	return values
+}

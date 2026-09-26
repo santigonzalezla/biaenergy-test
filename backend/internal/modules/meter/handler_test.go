@@ -49,7 +49,7 @@ func TestHandler(t *testing.T) {
 			}
 
 			router := chi.NewRouter()
-			NewHandler(NewService(repository)).RegisterRoutes(router)
+			NewHandler(NewService(repository, bogota)).RegisterRoutes(router)
 
 			request := httptest.NewRequest(tableTest.method, tableTest.path, strings.NewReader(tableTest.body))
 			recorder := httptest.NewRecorder()
@@ -98,14 +98,23 @@ func TestHandlerSeries(t *testing.T) {
 		{name: "Readings of missing meter", path: "/meters/" + meterID + "/readings", repositoryErr: ErrNotFound, wantStatus: http.StatusNotFound, wantCode: "METER_NOT_FOUND"},
 		{name: "Events with default range", path: "/meters/" + meterID + "/events", wantStatus: http.StatusOK},
 		{name: "Events of missing meter", path: "/meters/" + meterID + "/events", repositoryErr: ErrNotFound, wantStatus: http.StatusNotFound, wantCode: "METER_NOT_FOUND"},
+		{name: "Profile with default range", path: "/meters/" + meterID + "/profile", wantStatus: http.StatusOK},
+		{name: "Profile with explicit range", path: "/meters/" + meterID + "/profile?from=2026-09-08T00:00:00-05:00&to=2026-09-15T00:00:00-05:00", wantStatus: http.StatusOK},
+		{name: "Profile with invalid date", path: "/meters/" + meterID + "/profile?to=yesterday", wantStatus: http.StatusBadRequest, wantCode: "VALIDATION_ERROR"},
+		{name: "Profile of missing meter", path: "/meters/" + meterID + "/profile", repositoryErr: ErrNotFound, wantStatus: http.StatusNotFound, wantCode: "METER_NOT_FOUND"},
 	}
 
 	for _, tableTest := range tests {
 		t.Run(tableTest.name, func(t *testing.T) {
-			repository := &fakeRepository{err: tableTest.repositoryErr, hasReadings: true, latestReading: time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC)}
+			repository := &fakeRepository{
+				err:           tableTest.repositoryErr,
+				hasReadings:   true,
+				earliest:      time.Date(2026, 9, 1, 5, 0, 0, 0, time.UTC),
+				latestReading: time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC),
+			}
 
 			router := chi.NewRouter()
-			NewHandler(NewService(repository)).RegisterRoutes(router)
+			NewHandler(NewService(repository, bogota)).RegisterRoutes(router)
 
 			request := httptest.NewRequest(http.MethodGet, tableTest.path, nil)
 			recorder := httptest.NewRecorder()
@@ -129,18 +138,30 @@ func TestHandlerSeries(t *testing.T) {
 				return
 			}
 
+			// Lecturas/eventos traen "data"; el perfil trae "hours" (y "timezone")
 			var body struct {
-				From time.Time        `json:"from"`
-				To   time.Time        `json:"to"`
-				Data *json.RawMessage `json:"data"`
+				From     time.Time        `json:"from"`
+				To       time.Time        `json:"to"`
+				Data     *json.RawMessage `json:"data"`
+				Hours    *json.RawMessage `json:"hours"`
+				Timezone string           `json:"timezone"`
 			}
 
 			if err := json.NewDecoder(recorder.Body).Decode(&body); err != nil {
 				t.Fatalf("invalid series body: %v", err)
 			}
 
-			if body.From.IsZero() || body.To.IsZero() || body.Data == nil || string(*body.Data) == "null" {
-				t.Fatalf("series response must include from, to and data array: %+v", body)
+			items := body.Data
+			if body.Hours != nil {
+				items = body.Hours
+
+				if body.Timezone == "" {
+					t.Fatal("profile response must include the timezone")
+				}
+			}
+
+			if body.From.IsZero() || body.To.IsZero() || items == nil || string(*items) == "null" {
+				t.Fatalf("series response must include from, to and an items array: %+v", body)
 			}
 		})
 	}

@@ -28,8 +28,10 @@ type Repository interface {
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	ListReadings(ctx context.Context, params db.ListReadingsByMeterParams) ([]db.ListReadingsByMeterRow, error)
 	ListEvents(ctx context.Context, params db.ListEventsByMeterParams) ([]db.ListEventsByMeterRow, error)
+	EarliestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error)
 	LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error)
 	ConsumptionStats(ctx context.Context, params db.GetMeterConsumptionStatsParams) ([]db.GetMeterConsumptionStatsRow, error)
+	HourlyProfile(ctx context.Context, params db.GetMeterHourlyProfileParams) ([]db.GetMeterHourlyProfileRow, error)
 }
 
 type PostgresRepository struct {
@@ -137,6 +139,20 @@ func (repository *PostgresRepository) ListEvents(ctx context.Context, params db.
 	return events, nil
 }
 
+func (repository *PostgresRepository) EarliestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
+	earliest, err := repository.queries.GetEarliestReadingTime(ctx, id)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return time.Time{}, false, nil
+	}
+
+	if err != nil {
+		return time.Time{}, false, fmt.Errorf("failed to get earliest reading time: %w", err)
+	}
+
+	return earliest, true, nil
+}
+
 func (repository *PostgresRepository) LatestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
 	latest, err := repository.queries.GetLatestReadingTime(ctx, id)
 
@@ -159,6 +175,16 @@ func (repository *PostgresRepository) ConsumptionStats(ctx context.Context, para
 	}
 
 	return stats, nil
+}
+
+func (repository *PostgresRepository) HourlyProfile(ctx context.Context, params db.GetMeterHourlyProfileParams) ([]db.GetMeterHourlyProfileRow, error) {
+	profile, err := repository.queries.GetMeterHourlyProfile(ctx, params)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hourly profile: %w", err)
+	}
+
+	return profile, nil
 }
 
 func isUniqueViolation(err error) bool {

@@ -27,6 +27,9 @@ type fakeRepository struct {
 	eventsParams   db.ListEventsByMeterParams
 	stats          []db.GetMeterConsumptionStatsRow
 	statsErr       error
+	earliest       time.Time
+	profile        []db.GetMeterHourlyProfileRow
+	profileParams  db.GetMeterHourlyProfileParams
 }
 
 func (fake *fakeRepository) List(ctx context.Context, params db.ListMetersParams) ([]db.Meter, int64, error) {
@@ -80,6 +83,16 @@ func (fake *fakeRepository) LatestReadingTime(ctx context.Context, id uuid.UUID)
 
 func (fake *fakeRepository) ConsumptionStats(ctx context.Context, params db.GetMeterConsumptionStatsParams) ([]db.GetMeterConsumptionStatsRow, error) {
 	return fake.stats, fake.statsErr
+}
+
+func (fake *fakeRepository) EarliestReadingTime(ctx context.Context, id uuid.UUID) (time.Time, bool, error) {
+	return fake.earliest, fake.hasReadings, nil
+}
+
+func (fake *fakeRepository) HourlyProfile(ctx context.Context, params db.GetMeterHourlyProfileParams) ([]db.GetMeterHourlyProfileRow, error) {
+	fake.profileParams = params
+
+	return fake.profile, nil
 }
 
 func assertStatus(t *testing.T, err error, wantStatus int) {
@@ -153,7 +166,7 @@ func TestServiceList(t *testing.T) {
 	for _, tableTest := range tests {
 		t.Run(tableTest.name, func(t *testing.T) {
 			repository := &fakeRepository{}
-			service := NewService(repository)
+			service := NewService(repository, bogota)
 
 			_, err := service.List(context.Background(), tableTest.query)
 
@@ -220,7 +233,7 @@ func TestServiceCreate(t *testing.T) {
 	for _, tableTest := range tests {
 		t.Run(tableTest.name, func(t *testing.T) {
 			repository := &fakeRepository{err: tableTest.repositoryErr}
-			service := NewService(repository)
+			service := NewService(repository, bogota)
 
 			_, err := service.Create(context.Background(), tableTest.request)
 
@@ -239,7 +252,7 @@ func TestServiceCreate(t *testing.T) {
 
 func TestServiceUpdate(t *testing.T) {
 	repository := &fakeRepository{}
-	service := NewService(repository)
+	service := NewService(repository, bogota)
 
 	_, err := service.Update(context.Background(), uuid.New(), UpdateMeterRequest{
 		Name:   text("  Nuevo nombre "),
@@ -276,7 +289,7 @@ func TestServiceErrorMapping(t *testing.T) {
 
 	for _, tableTest := range tests {
 		t.Run(tableTest.name, func(t *testing.T) {
-			service := NewService(&fakeRepository{err: tableTest.repositoryErr})
+			service := NewService(&fakeRepository{err: tableTest.repositoryErr}, bogota)
 
 			_, getErr := service.Get(context.Background(), uuid.New())
 			assertStatus(t, getErr, tableTest.wantStatus)
@@ -339,7 +352,7 @@ func TestServiceSeriesRange(t *testing.T) {
 				latestReading: latest,
 				hasReadings:   tableTest.hasReadings,
 			}
-			service := NewService(repository)
+			service := NewService(repository, bogota)
 
 			response, err := service.ListReadings(context.Background(), uuid.New(), tableTest.query)
 
@@ -369,7 +382,7 @@ func TestServiceSeriesRange(t *testing.T) {
 
 func TestServiceSeriesWithoutReadings(t *testing.T) {
 	repository := &fakeRepository{hasReadings: false}
-	service := NewService(repository)
+	service := NewService(repository, bogota)
 
 	before := time.Now()
 	response, err := service.ListReadings(context.Background(), uuid.New(), SeriesQuery{})
@@ -392,7 +405,7 @@ func TestServiceListEvents(t *testing.T) {
 			{UidEvent: uuid.New(), DtmTimestampEvent: eventTime, StrTypeEvent: db.EventTypeUNKNOWN, StrDescriptionEvent: "No operational event reported"},
 		},
 	}
-	service := NewService(repository)
+	service := NewService(repository, bogota)
 
 	response, err := service.ListEvents(context.Background(), uuid.New(), SeriesQuery{})
 
@@ -449,7 +462,7 @@ func TestServiceListAttachesStats(t *testing.T) {
 				stats:    tableTest.stats,
 				statsErr: tableTest.statsErr,
 			}
-			service := NewService(repository)
+			service := NewService(repository, bogota)
 
 			page, err := service.List(context.Background(), ListQuery{})
 
@@ -485,5 +498,104 @@ func TestServiceListAttachesStats(t *testing.T) {
 				t.Fatalf("stats = %+v, want %+v", *stats, want)
 			}
 		})
+	}
+}
+
+// bogota es la zona horaria del sitio en los tests (la misma de APP_TIMEZONE).
+// Se carga UNA vez al iniciar el paquete de tests; MustLoad no existe, así que un helper hace el panic.
+var bogota = mustLoadLocation("America/Bogota")
+
+func mustLoadLocation(name string) *time.Location {
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		panic(err)
+	}
+
+	return location
+}
+
+func TestServiceHourlyProfile(t *testing.T) {
+	day := 24 * time.Hour
+	// Primera lectura del dataset: 1-sep 00:00 en Bogotá = 1-sep 05:00 UTC
+	earliest := time.Date(2026, 9, 1, 5, 0, 0, 0, time.UTC)
+	anchor := time.Date(2026, 9, 12, 5, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name        string
+		query       SeriesQuery
+		hasReadings bool
+		wantFrom    time.Time
+		wantTo      time.Time
+	}{
+		{
+			name:        "Default is the first week of data",
+			query:       SeriesQuery{},
+			hasReadings: true,
+			wantFrom:    earliest,
+			wantTo:      earliest.Add(7 * day),
+		},
+		{
+			name:     "Explicit range overrides the default",
+			query:    SeriesQuery{From: timePtr(anchor.Add(-2 * day)), To: &anchor},
+			wantFrom: anchor.Add(-2 * day),
+			wantTo:   anchor,
+		},
+	}
+
+	for _, tableTest := range tests {
+		t.Run(tableTest.name, func(t *testing.T) {
+			repository := &fakeRepository{
+				earliest:    earliest,
+				hasReadings: tableTest.hasReadings,
+				profile: []db.GetMeterHourlyProfileRow{
+					{HourOfDay: 14, AvgKwh: 51.31, ReadingsCount: 7},
+				},
+			}
+			service := NewService(repository, bogota)
+
+			response, err := service.HourlyProfile(context.Background(), uuid.New(), tableTest.query)
+
+			assertStatus(t, err, 0)
+
+			params := repository.profileParams
+
+			if !params.FromTime.Equal(tableTest.wantFrom) || !params.ToTime.Equal(tableTest.wantTo) {
+				t.Fatalf("range = [%s, %s), want [%s, %s)", params.FromTime.UTC(), params.ToTime.UTC(), tableTest.wantFrom, tableTest.wantTo)
+			}
+
+			// La zona viaja a Postgres (AT TIME ZONE) y vuelve en la respuesta
+			if params.Timezone != "America/Bogota" || response.Timezone != "America/Bogota" {
+				t.Fatalf("timezone sent/returned = %q/%q, want America/Bogota", params.Timezone, response.Timezone)
+			}
+
+			want := HourlyValue{Hour: 14, AvgKwh: 51.31, Samples: 7}
+			if len(response.Hours) != 1 || response.Hours[0] != want {
+				t.Fatalf("hours = %+v, want [%+v]", response.Hours, want)
+			}
+		})
+	}
+}
+
+func TestServiceReadingsAndProfileUseOppositeAnchors(t *testing.T) {
+	repository := &fakeRepository{
+		hasReadings:   true,
+		earliest:      time.Date(2026, 9, 1, 5, 0, 0, 0, time.UTC),
+		latestReading: time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC),
+	}
+	service := NewService(repository, bogota)
+
+	readings, err := service.ListReadings(context.Background(), uuid.New(), SeriesQuery{})
+	assertStatus(t, err, 0)
+
+	profile, err := service.HourlyProfile(context.Background(), uuid.New(), SeriesQuery{})
+	assertStatus(t, err, 0)
+
+	// Gráfica: la ÚLTIMA semana (8 al 14 de sep). Curva normal: la PRIMERA (1 al 7 de sep).
+	if !readings.From.Equal(time.Date(2026, 9, 8, 5, 0, 0, 0, time.UTC)) {
+		t.Fatalf("readings from = %s, want last week", readings.From)
+	}
+
+	if !profile.From.Equal(time.Date(2026, 9, 1, 5, 0, 0, 0, time.UTC)) {
+		t.Fatalf("profile from = %s, want first week", profile.From)
 	}
 }

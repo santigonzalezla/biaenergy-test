@@ -30,6 +30,7 @@ func (handler *Handler) RegisterRoutes(route chi.Router) {
 			meter.Delete("/", handler.delete)
 			meter.Get("/readings", handler.listReadings)
 			meter.Get("/events", handler.listEvents)
+			meter.Get("/profile", handler.hourlyProfile)
 		})
 	})
 }
@@ -174,6 +175,31 @@ func (handler *Handler) listEvents(writer http.ResponseWriter, request *http.Req
 	}
 
 	httpserver.WriteJSON(writer, http.StatusOK, series)
+}
+
+func (handler *Handler) hourlyProfile(writer http.ResponseWriter, request *http.Request) {
+	id, err := parseMeterID(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	query, err := parseSeriesQuery(request)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	profile, err := handler.service.HourlyProfile(request.Context(), id, query)
+
+	if err != nil {
+		httpserver.WriteError(writer, request, err)
+		return
+	}
+
+	httpserver.WriteJSON(writer, http.StatusOK, profile)
 }
 
 func parseMeterID(request *http.Request) (uuid.UUID, error) {

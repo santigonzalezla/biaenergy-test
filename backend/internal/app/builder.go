@@ -60,7 +60,7 @@ func (builder *Builder) WithModules() *Builder {
 
 	builder.modules = append(builder.modules,
 		health.NewHandler(builder.pool),
-		meter.NewHandler(meter.NewService(meterRepository)),
+		meter.NewHandler(meter.NewService(meterRepository, builder.cfg.Location)),
 		ingestion.NewHandler(ingestion.NewService(ingestion.NewPostgresRepository(builder.pool), builder.cfg.Location)),
 		dashboard.NewHandler(dashboard.NewService(dashboard.NewPostgresRepository(builder.pool))),
 	)

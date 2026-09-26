@@ -12,6 +12,23 @@ import (
 	"github.com/google/uuid"
 )
 
+const getEarliestReadingTime = `-- name: GetEarliestReadingTime :one
+SELECT dtm_timestamp_reading
+FROM reading
+WHERE uid_meter = $1
+ORDER BY dtm_timestamp_reading
+LIMIT 1
+`
+
+// Fecha de la primera lectura del medidor: ancla del período "normal" (baseline) del perfil horario.
+// Mismo patrón que GetLatestReadingTime, en orden ascendente: lee UNA fila del índice.
+func (q *Queries) GetEarliestReadingTime(ctx context.Context, uidMeter uuid.UUID) (time.Time, error) {
+	row := q.db.QueryRow(ctx, getEarliestReadingTime, uidMeter)
+	var dtm_timestamp_reading time.Time
+	err := row.Scan(&dtm_timestamp_reading)
+	return dtm_timestamp_reading, err
+}
+
 const getLatestReadingTime = `-- name: GetLatestReadingTime :one
 SELECT dtm_timestamp_reading
 FROM reading

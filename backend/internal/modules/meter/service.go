@@ -22,6 +22,11 @@ const (
 	statsRecentHours      = 48
 )
 
+const (
+	anchorLatest   rangeAnchor = iota // 0
+	anchorEarliest                    //1
+)
+
 var (
 	statsFrom = time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
 	statsTo   = time.Date(2100, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -32,6 +37,8 @@ var sorteableFields = map[string]bool{
 	"name":   true,
 	"status": true,
 }
+
+type rangeAnchor int
 
 type ListQuery struct {
 	Page     int
@@ -49,10 +56,11 @@ type SeriesQuery struct {
 
 type Service struct {
 	repository Repository
+	location   *time.Location
 }
 
-func NewService(repository Repository) *Service {
-	return &Service{repository: repository}
+func NewService(repository Repository, location *time.Location) *Service {
+	return &Service{repository: repository, location: location}
 }
 
 func (service *Service) List(ctx context.Context, query ListQuery) (pagination.Page[MeterResponse], error) {
@@ -188,7 +196,7 @@ func (service *Service) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (service *Service) ListReadings(ctx context.Context, id uuid.UUID, query SeriesQuery) (SeriesResponse[ReadingResponse], error) {
-	from, to, err := service.resolveRange(ctx, id, query)
+	from, to, err := service.resolveRange(ctx, id, query, anchorLatest)
 
 	if err != nil {
 		return SeriesResponse[ReadingResponse]{}, err
@@ -212,7 +220,7 @@ func (service *Service) ListReadings(ctx context.Context, id uuid.UUID, query Se
 }
 
 func (service *Service) ListEvents(ctx context.Context, id uuid.UUID, query SeriesQuery) (SeriesResponse[EventResponse], error) {
-	from, to, err := service.resolveRange(ctx, id, query)
+	from, to, err := service.resolveRange(ctx, id, query, anchorLatest)
 
 	if err != nil {
 		return SeriesResponse[EventResponse]{}, err
@@ -235,7 +243,33 @@ func (service *Service) ListEvents(ctx context.Context, id uuid.UUID, query Seri
 	}, nil
 }
 
-func (service *Service) resolveRange(ctx context.Context, id uuid.UUID, query SeriesQuery) (time.Time, time.Time, error) {
+func (service *Service) HourlyProfile(ctx context.Context, id uuid.UUID, query SeriesQuery) (ProfileResponse, error) {
+	from, to, err := service.resolveRange(ctx, id, query, anchorEarliest)
+
+	if err != nil {
+		return ProfileResponse{}, err
+	}
+
+	rows, err := service.repository.HourlyProfile(ctx, db.GetMeterHourlyProfileParams{
+		MeterID:  id,
+		FromTime: from,
+		ToTime:   to,
+		Timezone: service.location.String(),
+	})
+
+	if err != nil {
+		return ProfileResponse{}, err
+	}
+
+	return ProfileResponse{
+		From:     from.UTC(),
+		To:       to.UTC(),
+		Timezone: service.location.String(),
+		Hours:    toHourlyValues(rows),
+	}, nil
+}
+
+func (service *Service) resolveRange(ctx context.Context, id uuid.UUID, query SeriesQuery, anchor rangeAnchor) (time.Time, time.Time, error) {
 	if _, err := service.repository.GetById(ctx, id); err != nil {
 		return time.Time{}, time.Time{}, mapError(err)
 	}
@@ -252,18 +286,12 @@ func (service *Service) resolveRange(ctx context.Context, id uuid.UUID, query Se
 		to = *query.To
 		from = to.Add(-defaultSeriesWindow)
 	default:
-		latest, ok, err := service.repository.LatestReadingTime(ctx, id)
+		var err error
+		from, to, err = service.defaultRange(ctx, id, anchor)
 
 		if err != nil {
 			return time.Time{}, time.Time{}, err
 		}
-
-		if !ok {
-			latest = time.Now()
-		}
-
-		to = latest.Truncate(time.Hour).Add(time.Hour)
-		from = to.Add(-defaultSeriesWindow)
 	}
 
 	errs := map[string]string{}
@@ -308,6 +336,39 @@ func (service *Service) attachStats(ctx context.Context, responses []MeterRespon
 	}
 
 	return nil
+}
+
+func (service *Service) defaultRange(ctx context.Context, id uuid.UUID, anchor rangeAnchor) (time.Time, time.Time,
+	error) {
+	if anchor == anchorEarliest {
+		earliest, ok, err := service.repository.EarliestReadingTime(ctx, id)
+
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		if ok {
+			from := earliest.Truncate(time.Hour)
+
+			return from, from.Add(defaultSeriesWindow), nil
+		}
+	} else {
+		latest, ok, err := service.repository.LatestReadingTime(ctx, id)
+
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+
+		if ok {
+			to := latest.Truncate(time.Hour).Add(time.Hour)
+
+			return to.Add(-defaultSeriesWindow), to, nil
+		}
+	}
+
+	to := time.Now().Truncate(time.Hour).Add(time.Hour)
+
+	return to.Add(-defaultSeriesWindow), to, nil
 }
 
 func mapError(err error) error {
