@@ -278,3 +278,42 @@ M-109 supera el límite (363 A) en 46 horas; la mediana de esas horas es 485 A, 
 | M-106 | Caída de 12 h | `SCHEDULED_OUTAGE` "for 12 hours" (misma hora) | **Sí** | **Coincide** |
 | M-109 | Aumento, PF bajo, sobrecorriente | `UNKNOWN` "No operational event reported" | **No** | — |
 | M-112 | Voltaje fuera de rango e inestable, PF bajo | `DATA_QUALITY` | No (confirma problema de medición) | — |
+
+## 5. Clasificación: sistema de reglas
+
+**Principio.** La conclusión (qué tipo de anomalía es y qué tan grave) la toma un **sistema de reglas determinista**, no un modelo estadístico ni un LLM. Cada regla tiene un identificador (`ruleId`) que viaja con el hallazgo, así cada conclusión es **reproducible** (misma entrada, mismo resultado) y **auditable** (se sabe exactamente qué regla la produjo y con qué evidencia).
+
+**Evidencia.** Cada medidor llega con una lista de *evidencias*: cada señal de los detectores junto con su correlación con eventos (sección 4).
+
+**Evaluación en orden de prioridad, consumiendo señales.** Las reglas se evalúan en orden; cuando una se cumple, genera un hallazgo y **consume** las señales que usó. Así:
+
+- una señal nunca se cuenta dos veces (el PF bajo de M-109 forma parte de su hallazgo, no genera otro);
+- ninguna señal queda sin clasificar (la última regla recoge cualquier señal eléctrica suelta);
+- un medidor con dos problemas independientes produce dos hallazgos.
+
+| Regla | Condición | Tipo | Severidad |
+|---|---|---|---|
+| **R1_MEASUREMENT_FAULT** | Voltaje fuera de tolerancia o inestable **sin** cambio de consumo | `DATA_QUALITY` | HIGH |
+| **R2_SCHEDULED_OUTAGE** | Caída explicada por un corte o mantenimiento, ya recuperada, con duración consistente con la anunciada | `FALSE_POSITIVE` | LOW |
+| **R3_EXPLAINED_SURGE** | Aumento explicado por un `OPERATIONAL_CHANGE`, **sin** degradación del PF | `EXPLAINABLE_ANOMALY` | MEDIUM |
+| **R4_UNEXPLAINED_SURGE** | Cualquier otro aumento: sin causa conocida, o con el PF degradado | `REAL_ANOMALY` | HIGH si hay señales de equipo (PF, corriente) o el aumento es ≥ 50%; si no, MEDIUM |
+| **R5_UNEXPLAINED_DROP** | Cualquier otra caída: sin evento planificado, o más larga que lo anunciado | `REAL_ANOMALY` | HIGH si sigue activa; si no, MEDIUM |
+| **R6_EQUIPMENT_FAULT** | PF bajo o sobrecorriente sin cambio de consumo | `REAL_ANOMALY` | MEDIUM |
+
+**Por qué este orden y estas condiciones:**
+
+- **R1 va primero** porque, si la medición no es confiable, ninguna otra conclusión sobre ese medidor lo es. La condición "sin cambio de consumo" es la **incoherencia física** que delata el problema de medición: la red no alterna entre 201 y 241 V cada hora mientras la carga consume exactamente lo mismo.
+- **R2 exige tres cosas**, no solo "hay un evento": que el evento explique una caída, que el consumo ya se haya recuperado y que la duración no contradiga lo anunciado. Una caída que se prolonga más de lo planificado deja de ser un falso positivo (pasa a R5).
+- **R3 exige un comportamiento eléctrico sano.** Un aumento con justificación operativa pero con el PF degradado no se da por explicado: la nueva carga podría estar dañando equipos. Pasa a R4.
+- **R4 marca HIGH cuando hay señales de equipo** porque son la evidencia física de una falla (sección 3.4), no solo de más consumo.
+- **R6 cierra el sistema:** garantiza que ninguna señal eléctrica quede sin un hallazgo.
+
+**Resultado con el dataset:**
+
+| Medidor | Regla | Tipo | Severidad | Señales usadas |
+|---|---|---|---|---|
+| M-109 | R4_UNEXPLAINED_SURGE | `REAL_ANOMALY` | HIGH | Aumento +117%, PF bajo, sobrecorriente |
+| M-104 | R3_EXPLAINED_SURGE | `EXPLAINABLE_ANOMALY` | MEDIUM | Aumento +49% |
+| M-106 | R2_SCHEDULED_OUTAGE | `FALSE_POSITIVE` | LOW | Caída de 12 h |
+| M-112 | R1_MEASUREMENT_FAULT | `DATA_QUALITY` | HIGH | Voltaje fuera de rango, voltaje inestable, PF bajo |
+| 8 restantes | — | — | — | Sin señales, sin hallazgos |
