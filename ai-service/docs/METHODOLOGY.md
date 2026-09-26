@@ -317,3 +317,61 @@ M-109 supera el límite (363 A) en 46 horas; la mediana de esas horas es 485 A, 
 | M-106 | R2_SCHEDULED_OUTAGE | `FALSE_POSITIVE` | LOW | Caída de 12 h |
 | M-112 | R1_MEASUREMENT_FAULT | `DATA_QUALITY` | HIGH | Voltaje fuera de rango, voltaje inestable, PF bajo |
 | 8 restantes | — | — | — | Sin señales, sin hallazgos |
+
+## 6. Confianza y prioridad
+
+Cada hallazgo lleva dos puntajes que responden preguntas **distintas**:
+
+| | Pregunta | Rango |
+|---|---|---|
+| **Confianza** | ¿Qué tan seguros estamos de que la clasificación es correcta? | 0 – 1 |
+| **Prioridad** | ¿Qué tan urgente es que alguien lo revise? | 0 – 100 |
+
+La **severidad** (sección 5) es un tercer concepto: qué tan grave sería el problema *si es cierto*. Un hallazgo puede tener confianza alta y prioridad casi nula: M-106 es, con mucha seguridad, un corte programado, y por eso mismo no requiere acción.
+
+### Confianza: corroboración independiente
+
+**Principio.** Una conclusión es más confiable cuando la sostienen **varias fuentes independientes** que coinciden. Detectores distintos miran variables físicas distintas (consumo, factor de potencia, corriente, voltaje), y el registro de eventos es una fuente externa a las mediciones.
+
+```
+confianza = 0,55                                      base: la regla se cumplió
+          + 0,10 × señales adicionales (máx. +0,20)   cada detector adicional que coincide
+          + 0,15 si el contexto de eventos lo apoya
+          + 0,10 si además la duración anunciada coincide con la observada
+          (tope 0,99: ninguna conclusión automática es absolutamente segura)
+```
+
+El contexto de eventos apoya la conclusión cuando:
+
+- el hallazgo está **explicado** por su evento (falso positivo o anomalía explicable);
+- una anomalía real tiene un evento `UNKNOWN` que declara explícitamente que no hay causa operativa (es evidencia más fuerte que la simple ausencia de registros);
+- un problema de calidad de datos tiene un evento `DATA_QUALITY` que lo confirma.
+
+### Prioridad: un producto de factores
+
+**Principio.** La prioridad combina factores entre 0 y 1 **multiplicándolos**. Con un producto, cualquier factor cercano a cero anula la urgencia: un falso positivo nunca puede quedar arriba, sin importar su magnitud. Con una suma, un factor muy alto podría compensar a uno que debería descartarlo.
+
+```
+prioridad = 100 × tipo × severidad × impacto × confianza × actividad
+```
+
+| Factor | Valores | Qué representa |
+|---|---|---|
+| **Tipo** | REAL 1,0 · DATA_QUALITY 0,7 · EXPLAINABLE 0,4 · FALSE_POSITIVE 0,05 | Si requiere acción: una anomalía real sí; un falso positivo, no |
+| **Severidad** | HIGH 1,0 · MEDIUM 0,6 · LOW 0,3 | Gravedad asignada por la regla |
+| **Impacto** | 0,5 + 0,5 × min(1, \|variación de consumo\| / 100) | Cuánta energía está en juego; 0,5 como piso para los hallazgos sin cambio de consumo (calidad de datos) |
+| **Confianza** | 0 – 1 | Una conclusión dudosa pesa menos |
+| **Actividad** | activo 1,0 · ya resuelto 0,6 | Lo que sigue ocurriendo es más urgente que lo que ya terminó |
+
+**Resultado con el dataset:**
+
+| Medidor | Tipo | Severidad | Impacto | Confianza | Actividad | **Prioridad** |
+|---|---|---|---|---|---|---|
+| **M-109** | 1,0 | 1,0 | 1,00 (+117%) | 0,90 | 1,0 | **90,0** |
+| M-112 | 0,7 | 1,0 | 0,50 (sin cambio) | 0,90 | 1,0 | 31,5 |
+| M-104 | 0,4 | 0,6 | 0,74 (+49%) | 0,70 | 1,0 | 12,5 |
+| M-106 | 0,05 | 0,3 | 0,90 (−80%) | 0,80 | 0,6 | 0,6 |
+
+M-109 encabeza la lista con casi **tres veces** el puntaje del segundo. El orden refleja el criterio operativo: primero la falla real sin explicar (cuesta dinero y puede empeorar), después el medidor cuyas lecturas no son confiables, después el cambio explicado que solo requiere validación, y al final el corte programado, que no requiere acción.
+
+**Nota sobre los pesos.** Los pesos codifican un criterio de negocio (qué atender primero), no una propiedad estadística. Se eligieron para reflejar ese orden de atención y están centralizados en `scoring.py`, de modo que un operador pueda ajustarlos sin tocar los detectores ni las reglas.
