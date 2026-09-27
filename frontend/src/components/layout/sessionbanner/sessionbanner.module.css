@@ -1,0 +1,47 @@
+.banner
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 32px;
+    border-bottom: 1px solid var(--anomaly-explainable-soft);
+    background: var(--anomaly-explainable-soft);
+    color: var(--anomaly-explainable-text);
+    font-size: 13px;
+}
+
+.icon
+{
+    flex-shrink: 0;
+}
+
+.message
+{
+    flex: 1;
+    font-weight: 500;
+}
+
+.action
+{
+    padding: 6px 14px;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.action:hover
+{
+    background: var(--bg-surface);
+}
+
+@media (max-width: 1024px)
+{
+    .banner
+    {
+        padding: 10px 16px;
+    }
+}

@@ -1,0 +1,41 @@
+.layout
+{
+    min-height: 100vh;
+}
+
+.main
+{
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    margin-left: var(--sidebar-width);
+    transition: margin-left var(--transition-base);
+}
+
+.collapsed .main
+{
+    margin-left: var(--sidebar-width-collapsed);
+}
+
+.content
+{
+    flex: 1;
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 32px;
+}
+
+@media (max-width: 1024px)
+{
+    .main,
+    .collapsed .main
+    {
+        margin-left: 0;
+    }
+
+    .content
+    {
+        padding: 20px 16px;
+    }
+}

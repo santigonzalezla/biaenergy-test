@@ -1,0 +1,107 @@
+.topbar
+{
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    height: var(--topbar-height);
+    padding: 0 32px;
+    border-bottom: 1px solid var(--border-primary);
+    background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+    backdrop-filter: blur(12px);
+}
+
+.left,
+.right
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.breadcrumb
+{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+}
+
+.root
+{
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.separator
+{
+    flex-shrink: 0;
+    color: var(--text-muted);
+}
+
+.current
+{
+    overflow: hidden;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.iconButton
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.iconButton:hover
+{
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.menuButton
+{
+    display: none;
+}
+
+.divider
+{
+    width: 1px;
+    height: 20px;
+    background: var(--border-primary);
+}
+
+@media (max-width: 1024px)
+{
+    .topbar
+    {
+        padding: 0 16px;
+    }
+
+    .menuButton
+    {
+        display: flex;
+    }
+}
+
+@media (max-width: 640px)
+{
+    .root,
+    .separator
+    {
+        display: none;
+    }
+}

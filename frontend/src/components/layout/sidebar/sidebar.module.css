@@ -1,0 +1,238 @@
+.sidebar
+{
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    width: var(--sidebar-width);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border-primary);
+    transition: width var(--transition-base), transform var(--transition-base);
+}
+
+.collapsed
+{
+    width: var(--sidebar-width-collapsed);
+}
+
+.brand
+{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: var(--topbar-height);
+    padding: 0 20px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.logo
+{
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--accent-gradient);
+    color: var(--text-on-accent);
+    box-shadow: var(--accent-glow);
+}
+
+.brandText
+{
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.1;
+}
+
+.wordmark
+{
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+}
+
+.wordmark strong
+{
+    font-weight: 600;
+    color: var(--accent-text);
+}
+
+.product
+{
+    margin-top: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.closeButton
+{
+    display: none;
+    margin-left: auto;
+    padding: 6px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.sectionLabel
+{
+    padding: 20px 24px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.navigation
+{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 12px;
+}
+
+.link,
+.collapseButton
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.link:hover,
+.collapseButton:hover
+{
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.active,
+.active:hover
+{
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-weight: 600;
+}
+
+.collapseButton
+{
+    margin: 12px;
+    color: var(--text-muted);
+}
+
+.collapsed .brand
+{
+    justify-content: center;
+    padding: 0;
+}
+
+.collapsed .brandText,
+.collapsed .linkLabel
+{
+    display: none;
+}
+
+.collapsed .sectionLabel
+{
+    visibility: hidden;
+}
+
+.collapsed .link,
+.collapsed .collapseButton
+{
+    justify-content: center;
+    padding: 10px;
+}
+
+.backdrop
+{
+    display: none;
+}
+
+@media (max-width: 1024px)
+{
+    .sidebar,
+    .collapsed
+    {
+        width: var(--sidebar-width);
+        transform: translateX(-100%);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .mobileOpen
+    {
+        transform: translateX(0);
+    }
+
+    .collapsed .brand
+    {
+        justify-content: flex-start;
+        padding: 0 20px;
+    }
+
+    .collapsed .brandText,
+    .collapsed .linkLabel
+    {
+        display: flex;
+    }
+
+    .collapsed .sectionLabel
+    {
+        visibility: visible;
+    }
+
+    .collapsed .link
+    {
+        justify-content: flex-start;
+        padding: 10px 14px;
+    }
+
+    .closeButton
+    {
+        display: flex;
+    }
+
+    .collapseButton
+    {
+        display: none;
+    }
+
+    .backdrop
+    {
+        position: fixed;
+        inset: 0;
+        z-index: 49;
+        display: block;
+        background: var(--bg-overlay);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--transition-base);
+    }
+
+    .backdropVisible
+    {
+        opacity: 1;
+        pointer-events: auto;
+    }
+}
