@@ -13,7 +13,17 @@ type RouteRegister interface {
 	RegisterRoutes(route chi.Router)
 }
 
-func NewRouter(allowedOrigins []string, modules ...RouteRegister) http.Handler {
+type Routes struct {
+	Public      []RouteRegister
+	Protected   []RouteRegister
+	RequireAuth func(http.Handler) http.Handler
+}
+
+func NewRouter(allowedOrigins []string, routes Routes) http.Handler {
+	if len(routes.Protected) > 0 && routes.RequireAuth == nil {
+		panic("httpserver: protected routes require an auth middleware")
+	}
+
 	route := chi.NewRouter()
 
 	route.Use(middleware.RequestID)
@@ -37,9 +47,21 @@ func NewRouter(allowedOrigins []string, modules ...RouteRegister) http.Handler {
 	})
 
 	route.Route("/api", func(api chi.Router) {
-		for _, module := range modules {
+		for _, module := range routes.Public {
 			module.RegisterRoutes(api)
 		}
+
+		if len(routes.Protected) == 0 {
+			return
+		}
+
+		api.Group(func(protected chi.Router) {
+			protected.Use(routes.RequireAuth)
+
+			for _, module := range routes.Protected {
+				module.RegisterRoutes(protected)
+			}
+		})
 	})
 
 	return route

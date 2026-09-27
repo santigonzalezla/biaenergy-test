@@ -13,17 +13,19 @@ import (
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/httpserver"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/analysis"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/anomaly"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/auth"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/dashboard"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/meter"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/platform/database"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/platform/token"
 )
 
 type Builder struct {
 	cfg     config.Config
 	pool    *pgxpool.Pool
-	modules []httpserver.RouteRegister
+	routes  httpserver.Routes
 	workers []Worker
 	err     error
 }
@@ -75,9 +77,17 @@ func (builder *Builder) WithModules(ctx context.Context) *Builder {
 		return builder
 	}
 
+	tokenIssuer := token.NewIssuer(builder.cfg.JwtSecret, builder.cfg.JwtTtl)
+	requireAuth := auth.RequireAuth(tokenIssuer)
+	authService := auth.NewService(auth.NewPostgresRepository(builder.pool), tokenIssuer)
+
 	builder.workers = append(builder.workers, analysisService)
-	builder.modules = append(builder.modules,
+	builder.routes.RequireAuth = requireAuth
+	builder.routes.Public = append(builder.routes.Public,
 		health.NewHandler(builder.pool),
+		auth.NewHandler(authService, requireAuth),
+	)
+	builder.routes.Protected = append(builder.routes.Protected,
 		meter.NewHandler(meter.NewService(meterRepository, builder.cfg.Location)),
 		ingestion.NewHandler(ingestion.NewService(ingestion.NewPostgresRepository(builder.pool), builder.cfg.Location)),
 		dashboard.NewHandler(dashboard.NewService(dashboard.NewPostgresRepository(builder.pool))),
@@ -99,7 +109,7 @@ func (builder *Builder) Build() (*App, error) {
 
 	server := &http.Server{
 		Addr:              ":" + builder.cfg.Port,
-		Handler:           httpserver.NewRouter(builder.cfg.AllowedOrigins, builder.modules...),
+		Handler:           httpserver.NewRouter(builder.cfg.AllowedOrigins, builder.routes),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
