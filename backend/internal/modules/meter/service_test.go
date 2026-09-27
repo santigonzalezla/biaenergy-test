@@ -425,6 +425,28 @@ func timePtr(value time.Time) *time.Time {
 	return &value
 }
 
+func TestServiceGetAttachesStats(t *testing.T) {
+	meterID := uuid.New()
+	repository := &fakeRepository{
+		meter: db.Meter{UidMeter: meterID, StrCodeMeter: "M-109", StrStatusMeter: db.MeterStatusCRITICAL},
+		stats: []db.GetMeterConsumptionStatsRow{{UidMeter: meterID, BaselineAvgKwh: 43.7, RecentAvgKwh: 91.69, VariationPct: 109.8}},
+	}
+
+	meter, err := NewService(repository, bogota).Get(context.Background(), meterID)
+	if err != nil {
+		t.Fatalf("Get() error = %v", err)
+	}
+
+	if meter.Stats == nil || meter.Stats.VariationPct != 109.8 {
+		t.Fatalf("stats = %+v, want the meter's stats attached", meter.Stats)
+	}
+
+	repository.statsErr = errors.New("connection refused")
+	_, err = NewService(repository, bogota).Get(context.Background(), meterID)
+
+	assertStatus(t, err, http.StatusInternalServerError)
+}
+
 func TestServiceListAttachesStats(t *testing.T) {
 	meterID := uuid.New()
 	lastReading := time.Date(2026, 9, 15, 4, 0, 0, 0, time.UTC)

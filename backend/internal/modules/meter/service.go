@@ -127,7 +127,13 @@ func (service *Service) Get(ctx context.Context, id uuid.UUID) (MeterResponse, e
 		return MeterResponse{}, mapError(err)
 	}
 
-	return toMeterResponse(meter), nil
+	responses := []MeterResponse{toMeterResponse(meter)}
+
+	if err := service.attachStats(ctx, responses); err != nil {
+		return MeterResponse{}, err
+	}
+
+	return responses[0], nil
 }
 
 func (service *Service) Create(ctx context.Context, request CreateMeterRequest) (MeterResponse, error) {
