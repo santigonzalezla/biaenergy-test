@@ -219,3 +219,19 @@ func (q *Queries) GetLatestAnalysis(ctx context.Context) (Analysis, error) {
 	)
 	return i, err
 }
+
+const getLatestCompletedAnalysisID = `-- name: GetLatestCompletedAnalysisID :one
+SELECT uid_analysis
+FROM analysis
+WHERE str_status_analysis = 'COMPLETED'
+ORDER BY dtm_finished_at_analysis DESC
+LIMIT 1
+`
+
+// Análisis cuyas anomalías se muestran por defecto: el último que terminó bien (uno en curso aún no tiene resultados).
+func (q *Queries) GetLatestCompletedAnalysisID(ctx context.Context) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, getLatestCompletedAnalysisID)
+	var uid_analysis uuid.UUID
+	err := row.Scan(&uid_analysis)
+	return uid_analysis, err
+}

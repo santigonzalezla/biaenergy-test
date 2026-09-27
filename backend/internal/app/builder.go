@@ -12,6 +12,7 @@ import (
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/config"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/httpserver"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/analysis"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/anomaly"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/dashboard"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
@@ -81,6 +82,7 @@ func (builder *Builder) WithModules(ctx context.Context) *Builder {
 		ingestion.NewHandler(ingestion.NewService(ingestion.NewPostgresRepository(builder.pool), builder.cfg.Location)),
 		dashboard.NewHandler(dashboard.NewService(dashboard.NewPostgresRepository(builder.pool))),
 		analysis.NewHandler(analysisService),
+		anomaly.NewHandler(anomaly.NewService(anomaly.NewPostgresRepository(builder.pool))),
 	)
 
 	return builder

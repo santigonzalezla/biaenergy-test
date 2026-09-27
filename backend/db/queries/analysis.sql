@@ -58,3 +58,11 @@ SET str_status_analysis      = 'FAILED',
     str_error_analysis       = 'interrupted by a service restart',
     dtm_finished_at_analysis = now()
 WHERE str_status_analysis IN ('PENDING', 'RUNNING');
+
+-- name: GetLatestCompletedAnalysisID :one
+-- Análisis cuyas anomalías se muestran por defecto: el último que terminó bien (uno en curso aún no tiene resultados).
+SELECT uid_analysis
+FROM analysis
+WHERE str_status_analysis = 'COMPLETED'
+ORDER BY dtm_finished_at_analysis DESC
+LIMIT 1;

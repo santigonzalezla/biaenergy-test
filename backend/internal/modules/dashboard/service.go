@@ -17,5 +17,17 @@ func (service *Service) Summary(ctx context.Context) (SummaryResponse, error) {
 		return SummaryResponse{}, err
 	}
 
-	return toSummaryResponse(summary), nil
+	latest, exists, err := service.repository.LatestAnalysis(ctx)
+
+	if err != nil {
+		return SummaryResponse{}, err
+	}
+
+	response := toSummaryResponse(summary)
+
+	if exists {
+		response.LastAnalysis = toLastAnalysisResponse(latest)
+	}
+
+	return response, nil
 }

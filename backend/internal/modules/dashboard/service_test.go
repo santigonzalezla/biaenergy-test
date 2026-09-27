@@ -5,19 +5,29 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/apperror"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/db"
 )
 
-// fakeRepository devuelve la fila y el error que configure cada test
 type fakeRepository struct {
 	summary db.GetDashboardSummaryRow
+	latest  *db.Analysis
 	err     error
 }
 
 func (fake *fakeRepository) Summary(ctx context.Context) (db.GetDashboardSummaryRow, error) {
 	return fake.summary, fake.err
+}
+
+func (fake *fakeRepository) LatestAnalysis(ctx context.Context) (db.Analysis, bool, error) {
+	if fake.latest == nil {
+		return db.Analysis{}, false, nil
+	}
+
+	return *fake.latest, true, nil
 }
 
 func datasetSummary() db.GetDashboardSummaryRow {
@@ -64,4 +74,43 @@ func TestServiceSummary(t *testing.T) {
 			t.Fatalf("status = %d, want 500", got)
 		}
 	})
+}
+
+func TestSummaryIncludesTheLastAnalysis(t *testing.T) {
+	finished := time.Date(2026, 9, 27, 20, 17, 31, 0, time.UTC)
+	step := "completed"
+	latest := db.Analysis{
+		UidAnalysis:             uuid.New(),
+		StrStatusAnalysis:       db.AnalysisStatusCOMPLETED,
+		StrCurrentStepAnalysis:  &step,
+		NumProgressAnalysis:     100,
+		NumAnomaliesAnalysis:    4,
+		NumHighPriorityAnalysis: 2,
+		DtmFinishedAtAnalysis:   &finished,
+	}
+	service := NewService(&fakeRepository{summary: datasetSummary(), latest: &latest})
+
+	response, err := service.Summary(context.Background())
+	if err != nil {
+		t.Fatalf("Summary() error = %v", err)
+	}
+
+	last := response.LastAnalysis
+	if last == nil || last.Id != latest.UidAnalysis || last.Status != db.AnalysisStatusCOMPLETED {
+		t.Fatalf("lastAnalysis = %+v", last)
+	}
+	if last.Anomalies != 4 || last.HighPriority != 2 || !last.FinishedAt.Equal(finished) {
+		t.Fatalf("lastAnalysis = %+v, want 4 anomalies, 2 high priority and its finish time", last)
+	}
+}
+
+func TestSummaryWithoutAnalysesHasNoLastAnalysis(t *testing.T) {
+	response, err := NewService(&fakeRepository{summary: datasetSummary()}).Summary(context.Background())
+	if err != nil {
+		t.Fatalf("Summary() error = %v", err)
+	}
+
+	if response.LastAnalysis != nil {
+		t.Fatalf("lastAnalysis = %+v, want nil before the first analysis", response.LastAnalysis)
+	}
 }
