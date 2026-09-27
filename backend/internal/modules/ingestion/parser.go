@@ -41,7 +41,7 @@ type EventRow struct {
 
 type RowError struct {
 	Line    int    `json:"line"`
-	Column  string `json:"colum.omitempty"`
+	Column  string `json:"column,omitempty"`
 	Message string `json:"message"`
 }
 
