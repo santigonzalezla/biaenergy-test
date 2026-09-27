@@ -18,7 +18,14 @@ type Config struct {
 	Location       *time.Location
 	AiServiceUrl   string
 	AiTimeout      time.Duration
+	JwtSecret      string
+	JwtTtl         time.Duration
 }
+
+const (
+	minJwtSecretLength = 32
+	devJwtSecret       = "biaenergy-development-only-jwt-secret"
+)
 
 func Load() (Config, error) {
 	var errs []error
@@ -64,6 +71,25 @@ func Load() (Config, error) {
 		errs = append(errs, fmt.Errorf("AI_TIMEOUT must be a positive duration like 90s or 2m: %q", getEnv("AI_TIMEOUT", "2m")))
 	}
 	cfg.AiTimeout = aiTimeout
+
+	cfg.JwtSecret = getEnv("JWT_SECRET", "")
+
+	if cfg.JwtSecret == "" && cfg.IsProduction() {
+		errs = append(errs, errors.New("JWT_SECRET is required in production"))
+	} else if cfg.JwtSecret == "" {
+		cfg.JwtSecret = devJwtSecret
+	}
+
+	if cfg.JwtSecret != "" && len(cfg.JwtSecret) < minJwtSecretLength {
+		errs = append(errs, fmt.Errorf("JWT_SECRET must have at least %d characters", minJwtSecretLength))
+	}
+
+	jwtTtl, err := time.ParseDuration(getEnv("JWT_TTL", "12h"))
+
+	if err != nil || jwtTtl <= 0 {
+		errs = append(errs, fmt.Errorf("JWT_TTL must be a positive duration like 30m or 12h: %q", getEnv("JWT_TTL", "12h")))
+	}
+	cfg.JwtTtl = jwtTtl
 
 	return cfg, errors.Join(errs...)
 }

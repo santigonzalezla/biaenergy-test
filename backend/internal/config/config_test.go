@@ -57,7 +57,35 @@ func TestLoad(t *testing.T) {
 				"APP_ENV":         "production",
 				"ALLOWED_ORIGINS": "https://app.biaenergy.com",
 				"AI_SERVICE_URL":  "http://ai-service.railway.internal:8000",
+				"JWT_SECRET":      "a-production-secret-with-32-chars!",
 			},
+		},
+		{
+			name: "Missing JWT_SECRET in production",
+			env: map[string]string{
+				"DATABASE_URL":    "postgres://localhost/db",
+				"APP_ENV":         "production",
+				"ALLOWED_ORIGINS": "https://app.biaenergy.com",
+				"AI_SERVICE_URL":  "http://ai-service.railway.internal:8000",
+				"JWT_SECRET":      "",
+			},
+			wantErr: true,
+		},
+		{
+			name: "JWT_SECRET shorter than 32 characters",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/db",
+				"JWT_SECRET":   "too-short",
+			},
+			wantErr: true,
+		},
+		{
+			name: "JWT_TTL that is not positive",
+			env: map[string]string{
+				"DATABASE_URL": "postgres://localhost/db",
+				"JWT_TTL":      "-1h",
+			},
+			wantErr: true,
 		},
 		{
 			name: "Missing AI_SERVICE_URL in production",
@@ -166,5 +194,25 @@ func TestLoadAIServiceDefaults(t *testing.T) {
 
 	if cfg.AiTimeout != 2*time.Minute {
 		t.Fatalf("AiTimeout = %v, want 2m", cfg.AiTimeout)
+	}
+}
+
+func TestLoadJwtDefaultsInDevelopment(t *testing.T) {
+	t.Setenv("DATABASE_URL", "postgres://localhost/db")
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("JWT_SECRET", "")
+	t.Setenv("JWT_TTL", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.JwtSecret != devJwtSecret {
+		t.Fatalf("JwtSecret = %q, want the development default", cfg.JwtSecret)
+	}
+
+	if cfg.JwtTtl != 12*time.Hour {
+		t.Fatalf("JwtTtl = %v, want 12h", cfg.JwtTtl)
 	}
 }
