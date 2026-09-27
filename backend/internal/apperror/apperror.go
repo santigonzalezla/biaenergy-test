@@ -47,9 +47,9 @@ func Validation(details any) *AppError {
 	}
 }
 
-func Unauthorized(message string) *AppError {
+func Unauthorized(code, message string) *AppError {
 	return &AppError{
-		Code:    "UNAUTHORIZED",
+		Code:    code,
 		Message: message,
 		Status:  http.StatusUnauthorized,
 	}
