@@ -42,6 +42,16 @@ func (repository *PostgresRepository) GetByEmail(ctx context.Context, email stri
 	return user, nil
 }
 
+func (repository *PostgresRepository) Upsert(ctx context.Context, params db.UpsertUserParams) (db.AppUser, error) {
+	user, err := repository.queries.UpsertUser(ctx, params)
+
+	if err != nil {
+		return db.AppUser{}, fmt.Errorf("failed to upsert user: %w", err)
+	}
+
+	return user, nil
+}
+
 func (repository *PostgresRepository) GetById(ctx context.Context, id uuid.UUID) (db.AppUser, error) {
 	user, err := repository.queries.GetUser(ctx, id)
 

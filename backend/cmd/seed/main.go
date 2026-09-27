@@ -8,12 +8,14 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	_ "time/tzdata"
 
 	"github.com/joho/godotenv"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/apperror"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/config"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/auth"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/platform/database"
 )
@@ -46,6 +48,10 @@ func run() error {
 	}
 	defer pool.Close()
 
+	if err := seedAdmin(ctx, auth.NewPostgresRepository(pool)); err != nil {
+		return err
+	}
+
 	service := ingestion.NewService(ingestion.NewPostgresRepository(pool), cfg.Location)
 
 	if err := importFile(ctx, "readings", *readingsPath, service.ImportReadings); err != nil {
@@ -53,6 +59,42 @@ func run() error {
 	}
 
 	return importFile(ctx, "events", *eventsPath, service.ImportEvents)
+}
+
+func seedAdmin(ctx context.Context, writer auth.UserWriter) error {
+	account := auth.AdminAccount{
+		Email:    envOrDefault("ADMIN_EMAIL", "admin@bia.app"),
+		Password: os.Getenv("ADMIN_PASSWORD"),
+		Name:     envOrDefault("ADMIN_NAME", "Admin BIA"),
+	}
+
+	if account.Password == "" {
+		slog.Warn("admin user skipped", "reason", "ADMIN_PASSWORD is not set")
+		return nil
+	}
+
+	user, err := auth.UpsertAdmin(ctx, writer, account)
+
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) && appErr.Details != nil {
+			slog.Error("invalid admin account", "details", appErr.Details)
+		}
+
+		return fmt.Errorf("seed admin: %w", err)
+	}
+
+	slog.Info("admin user ready", "email", user.Email, "name", user.Name)
+
+	return nil
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+
+	return fallback
 }
 
 func importFile(ctx context.Context, label, path string, importFn ingestion.ImportFunc) error {

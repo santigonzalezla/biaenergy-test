@@ -53,6 +53,9 @@ services:
     entrypoint: ["/app/seed"]
     environment:
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@bia.app}
+      ADMIN_NAME: ${ADMIN_NAME:-Admin BIA}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
       migrator:
