@@ -34,7 +34,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	application, err := app.NewBuilder(cfg).WithDatabase(ctx).WithModules().Build()
+	application, err := app.NewBuilder(cfg).WithDatabase(ctx).WithModules(ctx).Build()
 
 	if err != nil {
 		return err

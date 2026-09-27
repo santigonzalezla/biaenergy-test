@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/aiclient"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/config"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/httpserver"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/analysis"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/dashboard"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
@@ -21,6 +23,7 @@ type Builder struct {
 	cfg     config.Config
 	pool    *pgxpool.Pool
 	modules []httpserver.RouteRegister
+	workers []Worker
 	err     error
 }
 
@@ -45,24 +48,39 @@ func (builder *Builder) WithDatabase(ctx context.Context) *Builder {
 	return builder
 }
 
-func (builder *Builder) WithModules() *Builder {
+func (builder *Builder) WithModules(ctx context.Context) *Builder {
 	if builder.err != nil {
 		return builder
 	}
 
 	if builder.pool == nil {
-
 		builder.err = errors.New("modules: WithDatabase must be called before WithModules")
 		return builder
 	}
 
 	meterRepository := meter.NewPostgresRepository(builder.pool)
 
+	aiClient := aiclient.New(builder.cfg.AiServiceUrl, aiclient.WithTimeout(builder.cfg.AiTimeout))
+	analysisService := analysis.NewService(
+		ctx,
+		analysis.NewPostgresRepository(builder.pool),
+		aiClient,
+		builder.cfg.Location.String(),
+		builder.cfg.AiTimeout,
+	)
+
+	if err := analysisService.RecoverInterrupted(ctx); err != nil {
+		builder.err = fmt.Errorf("failed to recover interrupted analyses: %w", err)
+		return builder
+	}
+
+	builder.workers = append(builder.workers, analysisService)
 	builder.modules = append(builder.modules,
 		health.NewHandler(builder.pool),
 		meter.NewHandler(meter.NewService(meterRepository, builder.cfg.Location)),
 		ingestion.NewHandler(ingestion.NewService(ingestion.NewPostgresRepository(builder.pool), builder.cfg.Location)),
 		dashboard.NewHandler(dashboard.NewService(dashboard.NewPostgresRepository(builder.pool))),
+		analysis.NewHandler(analysisService),
 	)
 
 	return builder
@@ -86,5 +104,5 @@ func (builder *Builder) Build() (*App, error) {
 		IdleTimeout:       60 * time.Second,
 	}
 
-	return &App{cfg: builder.cfg, server: server, pool: builder.pool}, nil
+	return &App{cfg: builder.cfg, server: server, pool: builder.pool, workers: builder.workers}, nil
 }

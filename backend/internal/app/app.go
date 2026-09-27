@@ -14,10 +14,15 @@ import (
 
 const shutdownTimeout = 10 * time.Second
 
+type Worker interface {
+	Wait()
+}
+
 type App struct {
-	cfg    config.Config
-	server *http.Server
-	pool   *pgxpool.Pool
+	cfg     config.Config
+	server  *http.Server
+	pool    *pgxpool.Pool
+	workers []Worker
 }
 
 func (app *App) Run(ctx context.Context) error {
@@ -45,6 +50,10 @@ func (app *App) Run(ctx context.Context) error {
 
 	if err := app.server.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("graceful shutdown failed: %w", err)
+	}
+
+	for _, worker := range app.workers {
+		worker.Wait()
 	}
 
 	slog.Info("server stopped gracefully")
