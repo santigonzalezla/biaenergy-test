@@ -67,6 +67,19 @@ func TestIssueAndVerify(t *testing.T) {
 	}
 }
 
+func TestIssueReturnsTheExpirationInUTC(t *testing.T) {
+	bogota := time.FixedZone("America/Bogota", -5*60*60)
+
+	_, expiresAt, err := newTestIssuer(issuedAt.In(bogota)).Issue(uuid.New(), "admin@bia.app")
+	if err != nil {
+		t.Fatalf("Issue() error = %v", err)
+	}
+
+	if expiresAt.Location() != time.UTC {
+		t.Fatalf("expiresAt location = %v, want UTC like every other API timestamp", expiresAt.Location())
+	}
+}
+
 func TestIssueAlignsExpirationWithTheTokenPrecision(t *testing.T) {
 	issuer := newTestIssuer(issuedAt.Add(750 * time.Millisecond))
 

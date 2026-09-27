@@ -34,7 +34,7 @@ type Repository interface {
 	Fail(ctx context.Context, id uuid.UUID, message string) error
 	FailInterrupted(ctx context.Context) (int64, error)
 	LoadDataset(ctx context.Context, meterIds []uuid.UUID) (Dataset, error)
-	Complete(ctx context.Context, id uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error
+	Complete(ctx context.Context, id uuid.UUID, meterIds []uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error
 }
 
 type PostgresRepository struct {
@@ -132,7 +132,7 @@ func (repository *PostgresRepository) LoadDataset(ctx context.Context, meterIds 
 	return Dataset{Meters: meters, Readings: readings, Events: events}, nil
 }
 
-func (repository *PostgresRepository) Complete(ctx context.Context, id uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error {
+func (repository *PostgresRepository) Complete(ctx context.Context, id uuid.UUID, meterIds []uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error {
 	tx, err := repository.pool.Begin(ctx)
 
 	if err != nil {
@@ -146,6 +146,12 @@ func (repository *PostgresRepository) Complete(ctx context.Context, id uuid.UUID
 		if err := queries.InsertAnomaly(ctx, anomaly); err != nil {
 			return fmt.Errorf("failed to save anomaly for meter %s: %w", anomaly.MeterID, err)
 		}
+	}
+
+	err = queries.RefreshMeterStatuses(ctx, db.RefreshMeterStatusesParams{AnalysisID: id, MeterIds: meterIds})
+
+	if err != nil {
+		return fmt.Errorf("failed to refresh meter statuses: %w", err)
 	}
 
 	err = queries.CompleteAnalysis(ctx, db.CompleteAnalysisParams{

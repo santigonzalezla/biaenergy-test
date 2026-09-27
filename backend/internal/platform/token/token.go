@@ -41,7 +41,7 @@ func NewIssuer(secret string, ttl time.Duration) *Issuer {
 }
 
 func (issuer *Issuer) Issue(userId uuid.UUID, email string) (string, time.Time, error) {
-	issuedAt := issuer.now().Truncate(time.Second)
+	issuedAt := issuer.now().UTC().Truncate(time.Second)
 	expiresAt := issuedAt.Add(issuer.ttl)
 
 	claims := registeredClaims{

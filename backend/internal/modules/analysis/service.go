@@ -186,7 +186,7 @@ func (service *Service) execute(ctx context.Context, id uuid.UUID, meterIds []uu
 		return err
 	}
 
-	return service.repository.Complete(ctx, id, anomalies, summary)
+	return service.repository.Complete(ctx, id, meterIds, anomalies, summary)
 }
 
 func (service *Service) fail(id uuid.UUID, cause error) {

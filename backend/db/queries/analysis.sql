@@ -66,3 +66,23 @@ FROM analysis
 WHERE str_status_analysis = 'COMPLETED'
 ORDER BY dtm_finished_at_analysis DESC
 LIMIT 1;
+
+-- name: RefreshMeterStatuses :exec
+-- Estado de cada medidor analizado según sus anomalías en este análisis. meter_ids NULL = toda la flota activa.
+UPDATE meter m
+SET str_status_meter = CASE
+                           WHEN EXISTS (SELECT 1
+                                        FROM anomaly a
+                                        WHERE a.uid_analysis = sqlc.arg('analysis_id')
+                                          AND a.uid_meter = m.uid_meter
+                                          AND a.str_type_anomaly = 'REAL_ANOMALY'
+                                          AND a.str_severity_anomaly = 'HIGH') THEN 'CRITICAL'
+                           WHEN EXISTS (SELECT 1
+                                        FROM anomaly a
+                                        WHERE a.uid_analysis = sqlc.arg('analysis_id')
+                                          AND a.uid_meter = m.uid_meter
+                                          AND a.str_type_anomaly IN ('REAL_ANOMALY', 'DATA_QUALITY')) THEN 'ALERT'
+                           ELSE 'OK'
+    END::meter_status
+WHERE m.dtm_deleted_at_meter IS NULL
+  AND (sqlc.narg('meter_ids')::uuid[] IS NULL OR m.uid_meter = ANY (sqlc.narg('meter_ids')::uuid[]));

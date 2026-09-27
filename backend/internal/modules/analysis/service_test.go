@@ -27,6 +27,7 @@ type fakeRepository struct {
 	failures    []string
 	anomalies   []db.InsertAnomalyParams
 	summary     *Summary
+	completedOn []uuid.UUID
 	interrupted int64
 }
 
@@ -104,10 +105,11 @@ func (fake *fakeRepository) LoadDataset(ctx context.Context, meterIds []uuid.UUI
 	return fake.dataset, nil
 }
 
-func (fake *fakeRepository) Complete(ctx context.Context, id uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error {
+func (fake *fakeRepository) Complete(ctx context.Context, id uuid.UUID, meterIds []uuid.UUID, anomalies []db.InsertAnomalyParams, summary Summary) error {
 	fake.mutex.Lock()
 	defer fake.mutex.Unlock()
 
+	fake.completedOn = meterIds
 	fake.anomalies = anomalies
 	fake.summary = &summary
 
@@ -199,6 +201,29 @@ func TestStartRunsTheAnalysisInTheBackground(t *testing.T) {
 	request := analyzer.requests[0]
 	if request.Timezone != "America/Bogota" || request.Meters[0].Code != "M-109" {
 		t.Fatalf("request sent to the AI = %+v", request)
+	}
+
+	if repository.completedOn != nil {
+		t.Fatalf("completedOn = %v, want nil so the whole fleet gets its status refreshed", repository.completedOn)
+	}
+}
+
+func TestStartRefreshesOnlyTheRequestedMeters(t *testing.T) {
+	repository := newFakeRepository()
+	meterId := repository.dataset.Meters[0].UidMeter
+	analyzer := &fakeAnalyzer{result: findings(meterId, uuid.New())}
+	service, cancel := newService(repository, analyzer)
+	defer cancel()
+
+	_, _, err := service.Start(context.Background(), StartRequest{MeterIds: []string{meterId.String()}})
+	service.Wait()
+
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+
+	if len(repository.completedOn) != 1 || repository.completedOn[0] != meterId {
+		t.Fatalf("completedOn = %v, want only %s", repository.completedOn, meterId)
 	}
 }
 
