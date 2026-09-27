@@ -3,7 +3,7 @@ export
 
 MIGRATIONS_DIR := backend/db/migrations
 
-.PHONY: db-up db-down db-reset db-psql migrate-new migrate-up migrate-down migrate-status sqlc dev seed
+.PHONY: db-up db-down db-reset db-psql migrate-new migrate-up migrate-down migrate-status sqlc dev seed seed-docker up
 
 #database
 db-up:
@@ -42,3 +42,10 @@ dev:
 #data
 seed:
 	cd backend && go run ./cmd/seed
+
+seed-docker:
+	docker compose --profile seed run --rm seed
+
+#stack
+up:
+	docker compose up -d --build

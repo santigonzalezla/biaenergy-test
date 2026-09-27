@@ -1,0 +1,14 @@
+*
+
+!backend
+!data/readings.csv
+!data/events.csv
+
+backend/.idea
+backend/tmp
+backend/bin
+backend/.air.toml
+backend/**/*_test.go
+backend/Dockerfile
+backend/Dockerfile.dockerignore
+backend/.dockerignore

@@ -1,7 +1,0 @@
-.idea
-tmp
-bin
-.air.toml
-**/*_test.go
-Dockerfile
-.dockerignore

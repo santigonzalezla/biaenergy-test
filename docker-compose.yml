@@ -33,7 +33,9 @@ services:
       LLM_MODEL: ${LLM_MODEL:-claude-sonnet-5}
 
   migrator:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: biaenergy-backend:local
     container_name: biaenergy-migrator
     entrypoint: ["/app/migrate"]
@@ -44,8 +46,22 @@ services:
       postgres:
         condition: service_healthy
 
+  seed:
+    image: biaenergy-backend:local
+    container_name: biaenergy-seed
+    profiles: ["seed"]
+    entrypoint: ["/app/seed"]
+    environment:
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: biaenergy-backend:local
     container_name: biaenergy-backend
     restart: unless-stopped
