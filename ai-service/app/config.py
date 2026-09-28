@@ -17,6 +17,7 @@ class Settings:
     timezone: str
     llm_api_key: str | None
     llm_model: str
+    service_token: str | None = None
 
     @property
     def is_production(self) -> bool:
@@ -51,6 +52,7 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
         timezone=timezone,
         llm_api_key=get_env(env, "LLM_API_KEY", "") or None,
         llm_model=get_env(env, "LLM_MODEL", DEFAULT_LLM_MODEL),
+        service_token=get_env(env, "AI_SERVICE_TOKEN", "") or None,
     )
 
 

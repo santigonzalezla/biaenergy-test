@@ -17,6 +17,7 @@ type Config struct {
 	AllowedOrigins []string
 	Location       *time.Location
 	AiServiceUrl   string
+	AiServiceToken string
 	AiTimeout      time.Duration
 	JwtSecret      string
 	JwtTtl         time.Duration
@@ -36,6 +37,7 @@ func Load() (Config, error) {
 		DatabaseUrl:    getEnv("DATABASE_URL", ""),
 		AllowedOrigins: splitAndTrim(getEnv("ALLOWED_ORIGINS", "")),
 		AiServiceUrl:   getEnv("AI_SERVICE_URL", "http://localhost:8000"),
+		AiServiceToken: getEnv("AI_SERVICE_TOKEN", ""),
 	}
 
 	if cfg.DatabaseUrl == "" {

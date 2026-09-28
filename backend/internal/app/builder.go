@@ -15,6 +15,7 @@ import (
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/anomaly"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/auth"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/dashboard"
+	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/docs"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/health"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/ingestion"
 	"github.com/santigonzalezla/biaenergy-test/backend/internal/modules/meter"
@@ -63,7 +64,11 @@ func (builder *Builder) WithModules(ctx context.Context) *Builder {
 
 	meterRepository := meter.NewPostgresRepository(builder.pool)
 
-	aiClient := aiclient.New(builder.cfg.AiServiceUrl, aiclient.WithTimeout(builder.cfg.AiTimeout))
+	aiClient := aiclient.New(
+		builder.cfg.AiServiceUrl,
+		aiclient.WithTimeout(builder.cfg.AiTimeout),
+		aiclient.WithServiceToken(builder.cfg.AiServiceToken),
+	)
 	analysisService := analysis.NewService(
 		ctx,
 		analysis.NewPostgresRepository(builder.pool),
@@ -85,6 +90,7 @@ func (builder *Builder) WithModules(ctx context.Context) *Builder {
 	builder.routes.RequireAuth = requireAuth
 	builder.routes.Public = append(builder.routes.Public,
 		health.NewHandler(builder.pool),
+		docs.NewHandler(),
 		auth.NewHandler(authService, requireAuth),
 	)
 	builder.routes.Protected = append(builder.routes.Protected,

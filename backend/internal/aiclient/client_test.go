@@ -112,6 +112,39 @@ func TestAnalyzeSendsTheContractTheAIServiceExpects(t *testing.T) {
 	}
 }
 
+func TestAnalyzeSendsTheServiceTokenOnlyWhenConfigured(t *testing.T) {
+	tests := []struct {
+		name      string
+		options   []Option
+		wantToken string
+	}{
+		{name: "Without token", wantToken: ""},
+		{name: "With token", options: []Option{WithServiceToken("a-shared-service-token")}, wantToken: "a-shared-service-token"},
+	}
+
+	for _, tableTest := range tests {
+		t.Run(tableTest.name, func(t *testing.T) {
+			var received string
+
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				received = request.Header.Get("X-Service-Token")
+				writer.Header().Set("Content-Type", "application/json")
+				_, _ = writer.Write([]byte(`{"metersAnalyzed":0,"findings":[]}`))
+			}))
+			defer server.Close()
+
+			_, err := New(server.URL, tableTest.options...).Analyze(context.Background(), AnalyzeRequest{})
+			if err != nil {
+				t.Fatalf("Analyze() error = %v", err)
+			}
+
+			if received != tableTest.wantToken {
+				t.Fatalf("X-Service-Token = %q, want %q", received, tableTest.wantToken)
+			}
+		})
+	}
+}
+
 func TestAnalyzeErrors(t *testing.T) {
 	tests := []struct {
 		name       string

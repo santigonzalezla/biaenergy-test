@@ -48,6 +48,11 @@ def test_listens_on_ipv4_by_default_and_on_every_interface_when_asked():
     assert load_settings({"HOST": "::"}).host == "::"
 
 
+def test_service_token_is_optional():
+    assert load_settings({}).service_token is None
+    assert load_settings({"AI_SERVICE_TOKEN": " token "}).service_token == "token"
+
+
 def test_reports_every_error_at_once():
     with pytest.raises(ConfigError) as error:
         load_settings({"PORT": "abc", "APP_TIMEZONE": "Mars/Olympus"})

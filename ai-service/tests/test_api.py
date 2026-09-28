@@ -86,3 +86,45 @@ def test_http_errors_use_the_api_error_format(client, method, path, status, code
 
     assert response.status_code == status
     assert response.json()["error"]["code"] == code
+
+
+@pytest.fixture(scope="module")
+def protected_client():
+    settings = Settings(
+        environment="test",
+        host="0.0.0.0",
+        port=8000,
+        timezone="America/Bogota",
+        llm_api_key=None,
+        llm_model="none",
+        service_token="a-shared-service-token",
+    )
+    return TestClient(create_app(settings), raise_server_exceptions=False)
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        pytest.param({}, id="missing token"),
+        pytest.param({"X-Service-Token": "wrong-token"}, id="wrong token"),
+    ],
+)
+def test_analyze_rejects_requests_without_the_service_token(protected_client, dataset_payload, headers):
+    response = protected_client.post("/analyze", json=dataset_payload, headers=headers)
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "INVALID_SERVICE_TOKEN"
+
+
+def test_analyze_accepts_the_service_token(protected_client, dataset_payload):
+    response = protected_client.post(
+        "/analyze", json=dataset_payload, headers={"X-Service-Token": "a-shared-service-token"}
+    )
+
+    assert response.status_code == 200
+
+
+def test_health_and_docs_stay_public_with_a_service_token(protected_client):
+    assert protected_client.get("/health").status_code == 200
+    assert protected_client.get("/docs").status_code == 200
+    assert "X-Service-Token" in protected_client.get("/openapi.json").text

@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException
 logger = logging.getLogger(__name__)
 
 HTTP_ERROR_CODES = {
+    401: "INVALID_SERVICE_TOKEN",
     404: "ROUTE_NOT_FOUND",
     405: "METHOD_NOT_ALLOWED",
 }

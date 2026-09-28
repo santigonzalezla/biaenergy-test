@@ -1,0 +1,808 @@
+openapi: 3.0.3
+info:
+  title: BiaEnergy Anomaly Center API
+  version: 1.0.0
+  description: |
+    API del centro de anomalías de consumo energético.
+
+    Para probar los endpoints protegidos: ejecuta `POST /auth/login`, copia el `token` de la respuesta,
+    pulsa **Authorize** y pégalo. Todas las fechas viajan en UTC (ISO 8601).
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: Salud
+  - name: Autenticación
+  - name: Medidores
+  - name: Importación
+  - name: Análisis IA
+  - name: Anomalías
+  - name: Dashboard
+
+paths:
+  /health:
+    get:
+      tags: [Salud]
+      summary: Estado del servicio y de la base de datos
+      security: []
+      responses:
+        '200':
+          description: Servicio y base de datos disponibles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: La base de datos no responde
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Inicia sesión y devuelve un JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Credenciales válidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Autenticación]
+      summary: Usuario de la sesión actual
+      responses:
+        '200':
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /meters:
+    get:
+      tags: [Medidores]
+      summary: Lista paginada de medidores con sus estadísticas de consumo
+      parameters:
+        - {name: search, in: query, schema: {type: string}, description: 'Busca en código, nombre y ubicación'}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/MeterStatus'}}
+        - {name: sortBy, in: query, schema: {type: string, enum: [code, name, status], default: code}}
+        - {name: sortDir, in: query, schema: {type: string, enum: [asc, desc], default: asc}}
+        - {name: page, in: query, schema: {type: integer, minimum: 1, default: 1}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        '200':
+          description: Página de medidores
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeterPage'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Medidores]
+      summary: Crea un medidor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeterRequest'
+      responses:
+        '201':
+          description: Medidor creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meter'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Ya existe un medidor con ese código (METER_DUPLICATE_CODE)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /meters/{meterId}:
+    parameters:
+      - $ref: '#/components/parameters/MeterId'
+    get:
+      tags: [Medidores]
+      summary: Detalle de un medidor con sus estadísticas
+      responses:
+        '200':
+          description: Medidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meter'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Medidores]
+      summary: Actualiza un medidor (el código no se puede cambiar)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeterRequest'
+      responses:
+        '200':
+          description: Medidor actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Meter'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Medidores]
+      summary: Elimina un medidor (borrado lógico, sus lecturas se conservan)
+      responses:
+        '204':
+          description: Medidor eliminado
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /meters/{meterId}/readings:
+    parameters:
+      - $ref: '#/components/parameters/MeterId'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+    get:
+      tags: [Medidores]
+      summary: Lecturas horarias en el rango [from, to) — máximo 31 días, por defecto los últimos 7
+      responses:
+        '200':
+          description: Serie de lecturas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from: {type: string, format: date-time}
+                  to: {type: string, format: date-time}
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Reading'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /meters/{meterId}/events:
+    parameters:
+      - $ref: '#/components/parameters/MeterId'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+    get:
+      tags: [Medidores]
+      summary: Eventos operativos del medidor en el rango
+      responses:
+        '200':
+          description: Serie de eventos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from: {type: string, format: date-time}
+                  to: {type: string, format: date-time}
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /meters/{meterId}/profile:
+    parameters:
+      - $ref: '#/components/parameters/MeterId'
+      - $ref: '#/components/parameters/From'
+      - $ref: '#/components/parameters/To'
+    get:
+      tags: [Medidores]
+      summary: Perfil horario promedio (0–23 h en hora local) del rango
+      responses:
+        '200':
+          description: Perfil horario
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HourlyProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /readings/import:
+    post:
+      tags: [Importación]
+      summary: Importa lecturas desde un CSV (idempotente, crea o restaura medidores)
+      description: 'Columnas: meter_id, timestamp, consumption_kwh, voltage_v, current_a, power_factor, status. Máximo 10 MB.'
+      requestBody:
+        $ref: '#/components/requestBodies/CsvFile'
+      responses:
+        '200':
+          description: Importación completada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/ImportError'
+
+  /events/import:
+    post:
+      tags: [Importación]
+      summary: Importa eventos operativos desde un CSV
+      description: 'Columnas: meter_id, event_timestamp, event_type, description. Tipos: OPERATIONAL_CHANGE, SCHEDULED_OUTAGE, DATA_QUALITY, MAINTENANCE, UNKNOWN.'
+      requestBody:
+        $ref: '#/components/requestBodies/CsvFile'
+      responses:
+        '200':
+          description: Importación completada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResult'
+        '400':
+          $ref: '#/components/responses/ImportError'
+
+  /imports:
+    get:
+      tags: [Importación]
+      summary: Historial de importaciones, incluidas las rechazadas
+      parameters:
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+      responses:
+        '200':
+          description: Lotes de importación, del más reciente al más antiguo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ImportBatch'
+
+  /ai/analyze:
+    post:
+      tags: [Análisis IA]
+      summary: Inicia un análisis asíncrono (202) o reutiliza el que esté en curso
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                meterIds:
+                  type: array
+                  description: Medidores a analizar. Vacío = toda la flota.
+                  items: {type: string, format: uuid}
+      responses:
+        '202':
+          description: Análisis aceptado; consulta su progreso en la URL de la cabecera Location
+          headers:
+            Location:
+              schema: {type: string}
+            X-Analysis-Reused:
+              schema: {type: string, enum: ['true', 'false']}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+
+  /ai/analysis/latest:
+    get:
+      tags: [Análisis IA]
+      summary: Último análisis
+      responses:
+        '200':
+          description: Análisis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '404':
+          description: Aún no se ha ejecutado ningún análisis (NO_ANALYSIS_YET)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /ai/analysis/{analysisId}:
+    get:
+      tags: [Análisis IA]
+      summary: Estado y progreso de un análisis (para polling)
+      parameters:
+        - {name: analysisId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        '200':
+          description: Análisis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Analysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /anomalies:
+    get:
+      tags: [Anomalías]
+      summary: Anomalías ordenadas por prioridad (por defecto, las del último análisis completado)
+      parameters:
+        - {name: analysisId, in: query, schema: {type: string, format: uuid}}
+        - {name: type, in: query, schema: {$ref: '#/components/schemas/AnomalyType'}}
+        - {name: severity, in: query, schema: {$ref: '#/components/schemas/Severity'}}
+        - {name: status, in: query, schema: {$ref: '#/components/schemas/AnomalyStatus'}}
+      responses:
+        '200':
+          description: Anomalías
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysisId: {type: string, format: uuid, nullable: true}
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AnomalySummary'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+  /anomalies/{anomalyId}:
+    get:
+      tags: [Anomalías]
+      summary: Detalle con explicación, evidencia, evento relacionado y acción recomendada
+      parameters:
+        - $ref: '#/components/parameters/AnomalyId'
+      responses:
+        '200':
+          description: Anomalía
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnomalyDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /anomalies/{anomalyId}/status:
+    patch:
+      tags: [Anomalías]
+      summary: Cambia el estado de seguimiento de una anomalía
+      description: 'Transiciones permitidas: OPEN → INVESTIGATING | RESOLVED | DISMISSED; INVESTIGATING → OPEN | RESOLVED | DISMISSED; RESOLVED → OPEN; DISMISSED → OPEN.'
+      parameters:
+        - $ref: '#/components/parameters/AnomalyId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: {$ref: '#/components/schemas/AnomalyStatus'}
+                note: {type: string, maxLength: 500}
+      responses:
+        '200':
+          description: Anomalía actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnomalyDetail'
+        '409':
+          description: Transición no permitida (INVALID_STATUS_TRANSITION)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /dashboard/summary:
+    get:
+      tags: [Dashboard]
+      summary: KPIs de la flota y último análisis
+      responses:
+        '200':
+          description: Resumen
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardSummary'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    MeterId:
+      name: meterId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    AnomalyId:
+      name: anomalyId
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+    From:
+      name: from
+      in: query
+      schema: {type: string, format: date-time}
+      description: Inicio del rango en RFC 3339 (incluido)
+    To:
+      name: to
+      in: query
+      schema: {type: string, format: date-time}
+      description: Fin del rango en RFC 3339 (excluido)
+
+  requestBodies:
+    CsvFile:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            type: object
+            required: [file]
+            properties:
+              file:
+                type: string
+                format: binary
+
+  responses:
+    Unauthorized:
+      description: Falta el token o es inválido (MISSING_TOKEN, INVALID_TOKEN, TOKEN_EXPIRED, INVALID_CREDENTIALS)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: El recurso no existe
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Datos inválidos (VALIDATION_ERROR con detalle por campo)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ImportError:
+      description: Archivo rechazado (VALIDATION_ERROR con filas inválidas, INVALID_CSV, EMPTY_CSV, INVALID_FILE)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: {type: string, example: VALIDATION_ERROR}
+            message: {type: string}
+            details: {description: Mapa campo → mensaje o lista de filas inválidas}
+            path: {type: string}
+            timestamp: {type: string, format: date-time}
+
+    Health:
+      type: object
+      properties:
+        status: {type: string, enum: [ok, degraded]}
+        database: {type: string, enum: [up, down]}
+        time: {type: string, format: date-time}
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email, example: admin@bia.app}
+        password: {type: string, format: password}
+
+    LoginResponse:
+      type: object
+      properties:
+        token: {type: string}
+        tokenType: {type: string, example: Bearer}
+        expiresAt: {type: string, format: date-time}
+        user: {$ref: '#/components/schemas/User'}
+
+    User:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        email: {type: string}
+        name: {type: string}
+
+    MeterStatus:
+      type: string
+      enum: [OK, ALERT, CRITICAL]
+
+    AnomalyType:
+      type: string
+      enum: [REAL_ANOMALY, EXPLAINABLE_ANOMALY, FALSE_POSITIVE, DATA_QUALITY]
+
+    Severity:
+      type: string
+      enum: [LOW, MEDIUM, HIGH]
+
+    AnomalyStatus:
+      type: string
+      enum: [OPEN, INVESTIGATING, RESOLVED, DISMISSED]
+
+    EventType:
+      type: string
+      enum: [OPERATIONAL_CHANGE, SCHEDULED_OUTAGE, DATA_QUALITY, MAINTENANCE, UNKNOWN]
+
+    MeterStats:
+      type: object
+      nullable: true
+      properties:
+        baselineKwh: {type: number, description: Consumo promedio por hora en los 7 días de referencia}
+        recentKwh: {type: number, description: Consumo promedio por hora en las últimas 48 h}
+        variationPct: {type: number}
+        minPowerFactor: {type: number}
+        totalKwh: {type: number}
+        lastReadingAt: {type: string, format: date-time}
+
+    Meter:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        numId: {type: integer}
+        code: {type: string, example: M-109}
+        name: {type: string}
+        location: {type: string}
+        sector: {type: string}
+        nominalVoltage: {type: number}
+        maxCurrent: {type: number, nullable: true}
+        contractedPowerKw: {type: number, nullable: true}
+        status: {$ref: '#/components/schemas/MeterStatus'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        stats: {$ref: '#/components/schemas/MeterStats'}
+
+    MeterPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/Meter'}
+        total: {type: integer}
+        page: {type: integer}
+        limit: {type: integer}
+
+    CreateMeterRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code: {type: string, pattern: '^[A-Z0-9-]{2,20}$', example: M-113}
+        name: {type: string, maxLength: 120}
+        location: {type: string}
+        sector: {type: string}
+        nominalVoltage: {type: number, default: 220}
+        maxCurrent: {type: number}
+        contractedPowerKw: {type: number}
+
+    UpdateMeterRequest:
+      type: object
+      properties:
+        name: {type: string, maxLength: 120}
+        location: {type: string}
+        sector: {type: string}
+        nominalVoltage: {type: number}
+        maxCurrent: {type: number}
+        contractedPowerKw: {type: number}
+        status: {$ref: '#/components/schemas/MeterStatus'}
+
+    Reading:
+      type: object
+      properties:
+        timestamp: {type: string, format: date-time}
+        consumptionKwh: {type: number}
+        voltage: {type: number}
+        current: {type: number}
+        powerFactor: {type: number}
+        status: {type: string}
+
+    Event:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        timestamp: {type: string, format: date-time}
+        type: {$ref: '#/components/schemas/EventType'}
+        description: {type: string}
+
+    HourlyProfile:
+      type: object
+      properties:
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        timezone: {type: string, example: America/Bogota}
+        hours:
+          type: array
+          items:
+            type: object
+            properties:
+              hour: {type: integer, minimum: 0, maximum: 23}
+              avgKwh: {type: number}
+              samples: {type: integer}
+
+    ImportResult:
+      type: object
+      properties:
+        batchId: {type: string, format: uuid}
+        rows: {type: integer}
+        inserted: {type: integer}
+        skipped: {type: integer, description: Filas que ya existían}
+        metersCreated: {type: integer}
+        metersRestored: {type: integer, description: Medidores eliminados que se reactivaron}
+        previouslyImportedAt: {type: string, format: date-time, nullable: true, description: Si el mismo archivo (SHA-256) ya se había importado}
+
+    ImportBatch:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        numId: {type: integer}
+        kind: {type: string, enum: [READINGS, EVENTS]}
+        status: {type: string, enum: [COMPLETED, FAILED]}
+        fileName: {type: string}
+        fileSize: {type: integer}
+        checksum: {type: string, description: SHA-256 del archivo}
+        rows: {type: integer}
+        inserted: {type: integer}
+        skipped: {type: integer}
+        metersCreated: {type: integer}
+        metersRestored: {type: integer}
+        errorCode: {type: string, nullable: true}
+        error: {type: string, nullable: true}
+        userName: {type: string, nullable: true}
+        createdAt: {type: string, format: date-time}
+
+    Analysis:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        numId: {type: integer}
+        status: {type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED]}
+        currentStep: {type: string, nullable: true, enum: [loading_data, analyzing, saving, completed]}
+        progress: {type: integer, minimum: 0, maximum: 100}
+        metersAnalyzed: {type: integer}
+        anomalies: {type: integer}
+        highPriority: {type: integer}
+        error: {type: string, nullable: true}
+        startedAt: {type: string, format: date-time, nullable: true}
+        finishedAt: {type: string, format: date-time, nullable: true}
+        createdAt: {type: string, format: date-time}
+
+    AnomalySummary:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        numId: {type: integer}
+        meterId: {type: string, format: uuid}
+        meterCode: {type: string}
+        meterName: {type: string}
+        type: {$ref: '#/components/schemas/AnomalyType'}
+        severity: {$ref: '#/components/schemas/Severity'}
+        status: {$ref: '#/components/schemas/AnomalyStatus'}
+        ruleId: {type: string, example: R4_UNEXPLAINED_SURGE}
+        confidence: {type: number, minimum: 0, maximum: 1}
+        priorityScore: {type: number, minimum: 0, maximum: 100}
+        variationPct: {type: number, nullable: true}
+        detectedAt: {type: string, format: date-time}
+        reason: {type: string, description: Explicación redactada por el LLM a partir de la evidencia}
+
+    Evidence:
+      type: object
+      properties:
+        signals:
+          type: array
+          items:
+            type: object
+            properties:
+              kind: {type: string, enum: [CONSUMPTION_SURGE, CONSUMPTION_DROP, VOLTAGE_OUT_OF_RANGE, VOLTAGE_INSTABILITY, LOW_POWER_FACTOR, OVERCURRENT]}
+              startedAt: {type: string, format: date-time}
+              endedAt: {type: string, format: date-time, nullable: true}
+              magnitude: {type: number}
+              baselineValue: {type: number}
+              observedValue: {type: number}
+              description: {type: string}
+        changedVariables:
+          type: array
+          items:
+            type: object
+            properties:
+              name: {type: string}
+              baseline: {type: number}
+              observed: {type: number}
+              changePct: {type: number}
+        relatedEvent:
+          allOf: [{$ref: '#/components/schemas/Event'}]
+          nullable: true
+
+    AnomalyDetail:
+      allOf:
+        - $ref: '#/components/schemas/AnomalySummary'
+        - type: object
+          properties:
+            analysisId: {type: string, format: uuid}
+            meter:
+              type: object
+              properties:
+                id: {type: string, format: uuid}
+                code: {type: string}
+                name: {type: string}
+                location: {type: string}
+            baselineKwh: {type: number, nullable: true}
+            currentKwh: {type: number, nullable: true}
+            windowStart: {type: string, format: date-time, nullable: true}
+            windowEnd: {type: string, format: date-time, nullable: true}
+            recommendedAction: {type: string}
+            changedVariables:
+              type: array
+              items: {type: string}
+            evidence: {$ref: '#/components/schemas/Evidence'}
+            relatedEvent:
+              allOf: [{$ref: '#/components/schemas/Event'}]
+              nullable: true
+            resolutionNote: {type: string, nullable: true}
+            updatedAt: {type: string, format: date-time}
+
+    DashboardSummary:
+      type: object
+      properties:
+        metersCount: {type: integer}
+        metersWithAlerts: {type: integer}
+        readingsCount: {type: integer}
+        totalKwh: {type: number}
+        openAnomalies: {type: integer}
+        highPriorityAnomalies: {type: integer}
+        lastAnalysis:
+          type: object
+          nullable: true
+          properties:
+            id: {type: string, format: uuid}
+            status: {type: string, enum: [PENDING, RUNNING, COMPLETED, FAILED]}
+            currentStep: {type: string, nullable: true}
+            progress: {type: integer}
+            anomalies: {type: integer}
+            highPriority: {type: integer}
+            error: {type: string, nullable: true}
+            createdAt: {type: string, format: date-time}
+            finishedAt: {type: string, format: date-time, nullable: true}

@@ -12,13 +12,15 @@ import (
 )
 
 const (
-	defaultTimeout   = 2 * time.Minute
-	maxResponseBytes = 20 << 20
+	defaultTimeout     = 2 * time.Minute
+	maxResponseBytes   = 20 << 20
+	serviceTokenHeader = "X-Service-Token"
 )
 
 type Client struct {
-	baseUrl    string
-	httpClient *http.Client
+	baseUrl      string
+	httpClient   *http.Client
+	serviceToken string
 }
 
 type Option func(*Client)
@@ -26,6 +28,12 @@ type Option func(*Client)
 func WithTimeout(timeout time.Duration) Option {
 	return func(client *Client) {
 		client.httpClient.Timeout = timeout
+	}
+}
+
+func WithServiceToken(token string) Option {
+	return func(client *Client) {
+		client.serviceToken = token
 	}
 }
 
@@ -71,6 +79,10 @@ func (client *Client) Analyze(ctx context.Context, request AnalyzeRequest) (Anal
 		return AnalyzeResult{}, fmt.Errorf("failed to build analysis request: %w", err)
 	}
 	httpRequest.Header.Set("Content-Type", "application/json")
+
+	if client.serviceToken != "" {
+		httpRequest.Header.Set(serviceTokenHeader, client.serviceToken)
+	}
 
 	response, err := client.httpClient.Do(httpRequest)
 
