@@ -1,0 +1,31 @@
+.page
+{
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.page > header
+{
+    margin-bottom: 8px;
+}
+
+.filters
+{
+    gap: 12px;
+    padding: 18px 20px;
+}
+
+.count
+{
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.list
+{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
