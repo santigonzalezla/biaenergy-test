@@ -1,0 +1,60 @@
+.button
+{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: var(--accent-gradient);
+    color: var(--text-on-accent);
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: var(--accent-glow);
+    transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+
+.button:hover
+{
+    filter: brightness(1.05);
+}
+
+.button:active
+{
+    transform: scale(0.98);
+}
+
+.sm
+{
+    height: 36px;
+    padding: 0 16px;
+    font-size: 12px;
+}
+
+.md
+{
+    height: 42px;
+    padding: 0 22px;
+    font-size: 13px;
+}
+
+.spinner
+{
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin
+{
+    to
+    {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 640px)
+{
+    .sm
+    {
+        padding: 0 12px;
+    }
+}

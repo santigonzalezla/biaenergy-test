@@ -1,0 +1,430 @@
+.backdrop
+{
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--transition-base);
+}
+
+.drawer
+{
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 71;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 460px;
+    border-left: 1px solid var(--border-primary);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-lg);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform var(--transition-base), visibility var(--transition-base);
+}
+
+.backdrop.open
+{
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.drawer.open
+{
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.header
+{
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 24px;
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.headerIcon
+{
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient);
+    color: var(--text-on-accent);
+}
+
+.headerText
+{
+    flex: 1;
+}
+
+.title
+{
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.subtitle
+{
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.close
+{
+    display: flex;
+    padding: 8px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    color: var(--text-secondary);
+}
+
+.close:hover
+{
+    background: var(--bg-muted);
+}
+
+.body
+{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.placeholder
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 0;
+    color: var(--text-muted);
+}
+
+.summary
+{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+}
+
+.summaryTop
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.elapsed
+{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.elapsed strong
+{
+    color: var(--text-primary);
+}
+
+.progressValue
+{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.percent
+{
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.failedText
+{
+    color: var(--anomaly-real-text);
+}
+
+.analysisId
+{
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.progressTrack
+{
+    height: 10px;
+    overflow: hidden;
+    border-radius: var(--radius-full);
+    background: var(--bg-muted);
+}
+
+.progressBar
+{
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent-gradient);
+    transition: width 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animated
+{
+    background-image: linear-gradient(90deg, #08DDBC 0%, #17FFDB 50%, #08DDBC 100%);
+    background-size: 200% 100%;
+    animation: flow 1.6s linear infinite;
+}
+
+.failedBar
+{
+    background: var(--anomaly-real);
+}
+
+.note
+{
+    display: flex;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: 13px;
+}
+
+.note svg
+{
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.steps
+{
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.step
+{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 22px;
+    font-size: 14px;
+}
+
+.step:last-child
+{
+    padding-bottom: 0;
+}
+
+.step:not(:last-child)::after
+{
+    content: '';
+    position: absolute;
+    top: 30px;
+    bottom: 2px;
+    left: 14px;
+    width: 2px;
+    background: var(--border-strong);
+}
+
+.stepNode
+{
+    z-index: 1;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-muted);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.stepLabel
+{
+    color: var(--text-muted);
+}
+
+.done .stepNode
+{
+    background: var(--accent-text);
+    color: var(--bg-surface);
+}
+
+.done:not(:last-child)::after
+{
+    background: var(--accent);
+}
+
+.done .stepLabel
+{
+    color: var(--text-primary);
+}
+
+.current .stepNode
+{
+    background: var(--accent);
+    color: var(--text-on-accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.current .stepLabel
+{
+    font-weight: 700;
+    color: var(--accent-text);
+}
+
+.failed .stepNode
+{
+    background: var(--anomaly-real);
+    color: #FFFFFF;
+}
+
+.failed .stepLabel
+{
+    font-weight: 700;
+    color: var(--anomaly-real-text);
+}
+
+.results
+{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.result
+{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px;
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.result strong
+{
+    font-size: 22px;
+    color: var(--text-primary);
+}
+
+.highlight strong
+{
+    color: var(--anomaly-real-text);
+}
+
+.failure
+{
+    display: flex;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--anomaly-real-soft);
+    border-radius: var(--radius-md);
+    background: var(--anomaly-real-soft);
+    color: var(--anomaly-real-text);
+    font-size: 13px;
+}
+
+.failure svg
+{
+    flex-shrink: 0;
+}
+
+.failure p
+{
+    margin-top: 2px;
+    color: var(--text-secondary);
+}
+
+.footer
+{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px 24px;
+    border-top: 1px solid var(--border-primary);
+}
+
+.primary,
+.secondary
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: var(--radius-full);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.primary
+{
+    border: none;
+    background: var(--accent-gradient);
+    color: var(--text-on-accent);
+    box-shadow: var(--accent-glow);
+}
+
+.secondary
+{
+    border: 1px solid var(--border-strong);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+}
+
+.secondary:hover
+{
+    background: var(--bg-hover);
+}
+
+.spinner
+{
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin
+{
+    to
+    {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes flow
+{
+    to
+    {
+        background-position: -200% 0;
+    }
+}

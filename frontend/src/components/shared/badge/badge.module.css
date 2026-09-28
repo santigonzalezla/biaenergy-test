@@ -1,0 +1,70 @@
+.badge
+{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 18px;
+    white-space: nowrap;
+}
+
+.dot
+{
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.pulse
+{
+    animation: pulse 1.6s ease-in-out infinite;
+}
+
+.real
+{
+    border-color: var(--anomaly-real-soft);
+    background: var(--anomaly-real-soft);
+    color: var(--anomaly-real-text);
+}
+
+.explainable
+{
+    border-color: var(--anomaly-explainable-soft);
+    background: var(--anomaly-explainable-soft);
+    color: var(--anomaly-explainable-text);
+}
+
+.falsePositive,
+.neutral
+{
+    border-color: var(--anomaly-false-positive-soft);
+    background: var(--anomaly-false-positive-soft);
+    color: var(--anomaly-false-positive-text);
+}
+
+.dataQuality
+{
+    border-color: var(--anomaly-data-quality-soft);
+    background: var(--anomaly-data-quality-soft);
+    color: var(--anomaly-data-quality-text);
+}
+
+.accent
+{
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+}
+
+@keyframes pulse
+{
+    50%
+    {
+        opacity: 0.35;
+    }
+}

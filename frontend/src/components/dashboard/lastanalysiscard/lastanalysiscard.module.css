@@ -1,0 +1,114 @@
+.card
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+}
+
+.info
+{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.heading
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.title
+{
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.chips
+{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.chip
+{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    background: var(--bg-subtle);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.danger
+{
+    background: var(--anomaly-real-soft);
+    color: var(--anomaly-real-text);
+    font-weight: 600;
+}
+
+.actions
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.link
+{
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-text);
+}
+
+.link:hover
+{
+    text-decoration: underline;
+}
+
+.empty
+{
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.emptyIcon
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-full);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+}
+
+.emptyText
+{
+    max-width: 480px;
+    color: var(--text-muted);
+}

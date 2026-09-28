@@ -1,5 +1,6 @@
 import styles from './topbar.module.css';
 import {ChevronRight, Menu, Moon, Sun} from 'lucide-react';
+import RunAnalysisButton from '@/components/analysis/runanalysisbutton/RunAnalysisButton.tsx';
 import UserMenu from '@/components/layout/usermenu/UserMenu.tsx';
 import {useTheme} from '@/context/theme.ts';
 
@@ -27,6 +28,7 @@ const TopBar = ({title, onOpenMenu}: TopBarProps) =>
             </div>
 
             <div className={styles.right}>
+                <RunAnalysisButton size='sm'/>
                 <button
                     type='button'
                     className={styles.iconButton}

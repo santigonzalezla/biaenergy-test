@@ -33,7 +33,13 @@ describe('routes', () =>
     {
         clearSession();
         localStorage.clear();
+        vi.stubGlobal('fetch', vi.fn(async () => new Response(
+            JSON.stringify({error: {code: 'NO_ANALYSIS_YET', message: 'No analysis has been run yet'}}),
+            {status: 404, headers: {'Content-Type': 'application/json'}},
+        )));
     });
+
+    afterEach(() => vi.unstubAllGlobals());
 
     it('sends anonymous visitors to the login and remembers where they were going', () =>
     {
