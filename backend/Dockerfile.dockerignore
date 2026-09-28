@@ -1,6 +1,8 @@
 *
 
 !backend
+!data
+data/*
 !data/readings.csv
 !data/events.csv
 
