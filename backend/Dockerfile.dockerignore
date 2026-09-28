@@ -1,16 +1,22 @@
-*
+**/.git
+**/.idea
+**/.DS_Store
+**/node_modules
+.env
+.env.*
+**/*.env
 
-!backend
-!data
-data/*
-!data/readings.csv
-!data/events.csv
+frontend
+ai-service
+docs
+docker-compose.yml
+Makefile
+data/expected_results*
 
-backend/.idea
 backend/tmp
 backend/bin
 backend/.air.toml
 backend/**/*_test.go
 backend/Dockerfile
 backend/Dockerfile.dockerignore
-backend/.dockerignore
+backend/railway.json
