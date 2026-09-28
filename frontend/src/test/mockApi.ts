@@ -35,6 +35,8 @@ export const mockApi = (routes: MockRoutes) =>
         const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined;
         const payload = typeof route.reply === 'function' ? route.reply({method, path, body}) : route.reply;
 
+        if (route.status === 204) return new Response(null, {status: 204});
+
         return new Response(JSON.stringify(payload), {status: route.status ?? 200, headers: {'Content-Type': 'application/json'}});
     });
 

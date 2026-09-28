@@ -64,7 +64,14 @@ describe('apiRequest', () =>
         const error = await apiRequest('/meters/1').catch(e => e);
 
         expect(error).toBeInstanceOf(ApiError);
-        expect(error).toMatchObject({status: 404, code: 'METER_NOT_FOUND', message: 'Meter not found'});
+        expect(error).toMatchObject({status: 404, code: 'METER_NOT_FOUND', message: 'El medidor no existe o fue eliminado.'});
+    });
+
+    it('keeps the backend message for codes without a translation', async () =>
+    {
+        fetchMock.mockResolvedValue(errorResponse(400, 'INVALID_METER_ID', 'Must be a valid UUID'));
+
+        await expect(apiRequest('/meters/x')).rejects.toMatchObject({code: 'INVALID_METER_ID', message: 'Must be a valid UUID'});
     });
 
     it('expires the session on TOKEN_EXPIRED but not on INVALID_CREDENTIALS', async () =>
