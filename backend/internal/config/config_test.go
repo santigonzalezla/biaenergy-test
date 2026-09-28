@@ -197,6 +197,36 @@ func TestLoadAIServiceDefaults(t *testing.T) {
 	}
 }
 
+func TestLoadPort(t *testing.T) {
+	tests := []struct {
+		name    string
+		apiPort string
+		port    string
+		want    string
+	}{
+		{name: "Default", want: "8080"},
+		{name: "Railway injects PORT", port: "7654", want: "7654"},
+		{name: "API_PORT wins over PORT", apiPort: "9000", port: "7654", want: "9000"},
+	}
+
+	for _, tableTest := range tests {
+		t.Run(tableTest.name, func(t *testing.T) {
+			t.Setenv("DATABASE_URL", "postgres://localhost/db")
+			t.Setenv("API_PORT", tableTest.apiPort)
+			t.Setenv("PORT", tableTest.port)
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatalf("Load() error = %v", err)
+			}
+
+			if cfg.Port != tableTest.want {
+				t.Fatalf("Port = %q, want %q", cfg.Port, tableTest.want)
+			}
+		})
+	}
+}
+
 func TestLoadJwtDefaultsInDevelopment(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/db")
 	t.Setenv("APP_ENV", "development")

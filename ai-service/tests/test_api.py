@@ -4,7 +4,9 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 
-SETTINGS = Settings(environment="test", port=8000, timezone="America/Bogota", llm_api_key=None, llm_model="none")
+SETTINGS = Settings(
+    environment="test", host="0.0.0.0", port=8000, timezone="America/Bogota", llm_api_key=None, llm_model="none"
+)
 
 
 @pytest.fixture(scope="module")

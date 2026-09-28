@@ -21,7 +21,7 @@ def main() -> None:
         logging.getLogger("app").error("invalid configuration: %s", error)
         sys.exit(1)
 
-    uvicorn.run(create_app(settings), host="0.0.0.0", port=settings.port)
+    uvicorn.run(create_app(settings), host=settings.host, port=settings.port)
 
 
 if __name__ == "__main__":

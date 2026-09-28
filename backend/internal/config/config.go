@@ -32,7 +32,7 @@ func Load() (Config, error) {
 
 	cfg := Config{
 		Env:            getEnv("APP_ENV", "development"),
-		Port:           getEnv("API_PORT", "8080"),
+		Port:           getEnv("API_PORT", getEnv("PORT", "8080")),
 		DatabaseUrl:    getEnv("DATABASE_URL", ""),
 		AllowedOrigins: splitAndTrim(getEnv("ALLOWED_ORIGINS", "")),
 		AiServiceUrl:   getEnv("AI_SERVICE_URL", "http://localhost:8000"),

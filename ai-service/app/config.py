@@ -12,6 +12,7 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class Settings:
     environment: str
+    host: str
     port: int
     timezone: str
     llm_api_key: str | None
@@ -45,6 +46,7 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
 
     return Settings(
         environment=get_env(env, "APP_ENV", "development"),
+        host=get_env(env, "HOST", "0.0.0.0"),
         port=int(raw_port),
         timezone=timezone,
         llm_api_key=get_env(env, "LLM_API_KEY", "") or None,

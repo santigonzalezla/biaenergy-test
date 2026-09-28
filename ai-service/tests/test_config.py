@@ -43,6 +43,11 @@ def test_invalid_configuration(environ, message):
         load_settings(environ)
 
 
+def test_listens_on_ipv4_by_default_and_on_every_interface_when_asked():
+    assert load_settings({}).host == "0.0.0.0"
+    assert load_settings({"HOST": "::"}).host == "::"
+
+
 def test_reports_every_error_at_once():
     with pytest.raises(ConfigError) as error:
         load_settings({"PORT": "abc", "APP_TIMEZONE": "Mars/Olympus"})
