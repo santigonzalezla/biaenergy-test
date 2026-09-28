@@ -24,7 +24,7 @@ describe('DashboardPage', () =>
     {
         mockApi({...dashboardRoutes, 'GET /ai/analysis/latest': ok(analysis())});
 
-        renderApp('/dashboard');
+        await renderApp('/dashboard');
 
         expect(await screen.findByText('155.250,85')).toBeInTheDocument();
         expect(screen.getByText('4.032')).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe('DashboardPage', () =>
             'GET /ai/analysis/latest': apiError(404, 'NO_ANALYSIS_YET'),
         });
 
-        renderApp('/dashboard');
+        await renderApp('/dashboard');
 
         expect(await screen.findByText('Aún no hay análisis')).toBeInTheDocument();
         expect(await screen.findByText('Sin anomalías')).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe('DashboardPage', () =>
         });
         const user = userEvent.setup();
 
-        renderApp('/dashboard');
+        await renderApp('/dashboard');
 
         expect(await screen.findByText('No se pudo cargar el resumen')).toBeInTheDocument();
         await user.click(screen.getByRole('button', {name: 'Reintentar'}));
@@ -90,7 +90,7 @@ describe('DashboardPage', () =>
         });
         const user = userEvent.setup();
 
-        renderApp('/dashboard');
+        await renderApp('/dashboard');
 
         await screen.findByText('Aún no hay análisis');
         await user.click(screen.getAllByRole('button', {name: 'Ejecutar análisis IA'})[0]);
@@ -120,7 +120,7 @@ describe('DashboardPage', () =>
         });
         const user = userEvent.setup();
 
-        renderApp('/dashboard');
+        await renderApp('/dashboard');
 
         await user.click(await screen.findByRole('button', {name: 'Ver progreso'}));
 

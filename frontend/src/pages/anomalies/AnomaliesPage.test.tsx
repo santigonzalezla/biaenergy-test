@@ -26,7 +26,7 @@ describe('AnomaliesPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/anomalies');
+        await renderApp('/anomalies');
 
         expect(await screen.findByText(/Resultado del análisis #5 · 27 de sept de 2026, 17:13/)).toBeInTheDocument();
 
@@ -45,7 +45,7 @@ describe('AnomaliesPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/anomalies');
+        await renderApp('/anomalies');
 
         const typeFilter = await screen.findByRole('combobox', {name: 'Tipo'});
         expect(within(typeFilter).getByRole('option', {name: 'Anomalía real (1)'})).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe('AnomaliesPage', () =>
         mockApi(routes());
         const user = userEvent.setup();
 
-        const router = renderApp('/anomalies');
+        const router = await renderApp('/anomalies');
 
         await user.selectOptions(await screen.findByRole('combobox', {name: 'Tipo'}), 'FALSE_POSITIVE');
 
@@ -79,7 +79,7 @@ describe('AnomaliesPage', () =>
         mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/anomalies?type=EXPLAINABLE_ANOMALY&severity=HIGH');
+        await renderApp('/anomalies?type=EXPLAINABLE_ANOMALY&severity=HIGH');
 
         expect(await screen.findByText('Ninguna anomalía coincide con los filtros')).toBeInTheDocument();
         expect(screen.getByRole('combobox', {name: 'Tipo'})).toHaveValue('EXPLAINABLE_ANOMALY');
@@ -96,7 +96,7 @@ describe('AnomaliesPage', () =>
             'GET /anomalies': ok({analysisId: null, data: []}),
         }));
 
-        renderApp('/anomalies');
+        await renderApp('/anomalies');
 
         expect(await screen.findByText('Aún no hay anomalías')).toBeInTheDocument();
         expect(screen.getAllByRole('button', {name: 'Ejecutar análisis IA'}).length).toBeGreaterThan(1);

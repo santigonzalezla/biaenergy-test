@@ -1,31 +1,14 @@
-import {act, render, screen} from '@testing-library/react';
+import {act, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {createMemoryRouter, RouterProvider} from 'react-router';
-import AuthProvider from '@/context/AuthContext.tsx';
-import ThemeProvider from '@/context/ThemeContext.tsx';
 import {clearSession, notifySessionExpired, readSession, saveSession} from '@/lib/session.ts';
-import {routes} from '@/router/routes.tsx';
+import {renderApp} from '@/test/renderApp.tsx';
 
 const admin = {id: 'f90768ae-b4ed-425e-bdbd-918714c97484', email: 'admin@bia.app', name: 'Admin BIA'};
 
 const jsonResponse = (status: number, body: unknown) =>
     new Response(JSON.stringify(body), {status, headers: {'Content-Type': 'application/json'}});
 
-const renderLogin = (from?: string) =>
-{
-    const entry = from ? {pathname: '/login', state: {from: {pathname: from, search: ''}}} : '/login';
-    const router = createMemoryRouter(routes, {initialEntries: [entry]});
-
-    render(
-        <ThemeProvider>
-            <AuthProvider>
-                <RouterProvider router={router}/>
-            </AuthProvider>
-        </ThemeProvider>
-    );
-
-    return router;
-}
+const renderLogin = (from?: string) => renderApp(from ? {pathname: '/login', state: {from: {pathname: from, search: ''}}} : '/login');
 
 describe('LoginForm', () =>
 {
@@ -46,14 +29,14 @@ describe('LoginForm', () =>
         fetchMock.mockResolvedValue(jsonResponse(200, {token: 'new.jwt.token', tokenType: 'Bearer', expiresAt, user: admin}));
         const user = userEvent.setup();
 
-        const router = renderLogin('/anomalies');
+        const router = await renderLogin('/anomalies');
 
         await user.type(screen.getByLabelText('Correo electrónico'), 'admin@bia.app');
         await user.type(screen.getByLabelText('Contraseña'), 'a-long-admin-password');
         await user.click(screen.getByRole('button', {name: 'Ingresar'}));
 
         expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({email: 'admin@bia.app', password: 'a-long-admin-password'});
-        expect(router.state.location.pathname).toBe('/anomalies');
+        await waitFor(() => expect(router.state.location.pathname).toBe('/anomalies'));
         expect(readSession()?.token).toBe('new.jwt.token');
     });
 
@@ -62,7 +45,7 @@ describe('LoginForm', () =>
         fetchMock.mockResolvedValue(jsonResponse(401, {error: {code: 'INVALID_CREDENTIALS', message: 'Email or password is incorrect'}}));
         const user = userEvent.setup();
 
-        const router = renderLogin();
+        const router = await renderLogin();
 
         await user.type(screen.getByLabelText('Correo electrónico'), 'admin@bia.app');
         await user.type(screen.getByLabelText('Contraseña'), 'wrong-password');
@@ -80,7 +63,7 @@ describe('LoginForm', () =>
         }));
         const user = userEvent.setup();
 
-        renderLogin();
+        await renderLogin();
 
         await user.type(screen.getByLabelText('Correo electrónico'), 'admin');
         await user.click(screen.getByRole('button', {name: 'Ingresar'}));
@@ -93,7 +76,7 @@ describe('LoginForm', () =>
     {
         const user = userEvent.setup();
 
-        renderLogin();
+        await renderLogin();
 
         const password = screen.getByLabelText('Contraseña');
         expect(password).toHaveAttribute('type', 'password');
@@ -105,18 +88,10 @@ describe('LoginForm', () =>
         expect(password).toHaveAttribute('type', 'password');
     });
 
-    it('tells the user when the session expired', () =>
+    it('tells the user when the session expired', async () =>
     {
         saveSession({token: 'old.jwt.token', expiresAt: new Date(Date.now() + 60_000).toISOString(), user: admin});
-        const router = createMemoryRouter(routes, {initialEntries: ['/dashboard']});
-
-        render(
-            <ThemeProvider>
-                <AuthProvider>
-                    <RouterProvider router={router}/>
-                </AuthProvider>
-            </ThemeProvider>
-        );
+        const router = await renderApp('/dashboard');
 
         act(() => notifySessionExpired());
 

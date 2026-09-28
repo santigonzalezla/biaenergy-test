@@ -46,7 +46,7 @@ describe('MeterDetailPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/meters/m-109');
+        await renderApp('/meters/m-109');
 
         expect(await screen.findByRole('heading', {name: 'Medidor M-109'})).toBeInTheDocument();
         expect(screen.getByText('Crítico')).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('MeterDetailPage', () =>
         mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/meters/m-109');
+        await renderApp('/meters/m-109');
 
         const panel = await screen.findByRole('tabpanel', {name: 'Factor de potencia'});
         expect(within(panel).getByText('0,94')).toBeInTheDocument();
@@ -86,7 +86,7 @@ describe('MeterDetailPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/meters/m-109');
+        await renderApp('/meters/m-109');
 
         expect(await screen.findByText('Coincide con el cambio, pero no lo explica')).toBeInTheDocument();
         expect(screen.getByText('No operational event reported')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('MeterDetailPage', () =>
         const fetchMock = mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/meters/m-109');
+        await renderApp('/meters/m-109');
         await screen.findByRole('tabpanel', {name: 'Factor de potencia'});
 
         await user.click(screen.getByRole('button', {name: '3 días'}));
@@ -124,7 +124,7 @@ describe('MeterDetailPage', () =>
             'GET /meters/m-101/profile': ok(profile),
         });
 
-        renderApp('/meters/m-101');
+        await renderApp('/meters/m-101');
 
         expect(await screen.findByText('El último análisis no encontró anomalías en este medidor.')).toBeInTheDocument();
         expect(screen.queryByRole('region', {name: 'Anomalía detectada en el último análisis'})).not.toBeInTheDocument();
@@ -139,7 +139,7 @@ describe('MeterDetailPage', () =>
             'GET /anomalies': ok(anomalyList()),
         });
 
-        renderApp('/meters/unknown');
+        await renderApp('/meters/unknown');
 
         expect(await screen.findByText('Medidor no encontrado')).toBeInTheDocument();
         expect(screen.getByRole('link', {name: /Volver a medidores/})).toHaveAttribute('href', '/meters');

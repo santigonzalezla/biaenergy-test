@@ -13,19 +13,21 @@ import (
 )
 
 const insertEvents = `-- name: InsertEvents :execrows
-INSERT INTO event (uid_meter, dtm_timestamp_event, str_type_event, str_description_event)
+INSERT INTO event (uid_meter, dtm_timestamp_event, str_type_event, str_description_event, uid_import_batch)
 SELECT unnest($1::uuid[]),
        unnest($2::timestamptz[]),
        unnest($3::text[])::event_type,
-       unnest($4::text[])
+       unnest($4::text[]),
+       $5::uuid
 ON CONFLICT (uid_meter, dtm_timestamp_event, str_type_event) DO NOTHING
 `
 
 type InsertEventsParams struct {
-	MeterIds     []uuid.UUID
-	Timestamps   []time.Time
-	Types        []string
-	Descriptions []string
+	MeterIds      []uuid.UUID
+	Timestamps    []time.Time
+	Types         []string
+	Descriptions  []string
+	ImportBatchID *uuid.UUID
 }
 
 // Mismo patrón que InsertReadings; el tipo llega como text[] y se convierte al enum en SQL
@@ -35,6 +37,7 @@ func (q *Queries) InsertEvents(ctx context.Context, arg InsertEventsParams) (int
 		arg.Timestamps,
 		arg.Types,
 		arg.Descriptions,
+		arg.ImportBatchID,
 	)
 	if err != nil {
 		return 0, err

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	_ "time/tzdata"
@@ -104,7 +105,12 @@ func importFile(ctx context.Context, label, path string, importFn ingestion.Impo
 	}
 	defer file.Close()
 
-	result, err := importFn(ctx, file)
+	info, err := file.Stat()
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", path, err)
+	}
+
+	result, err := importFn(ctx, ingestion.Upload{FileName: filepath.Base(path), Size: info.Size(), Content: file})
 	if err != nil {
 		var appErr *apperror.AppError
 		if errors.As(err, &appErr) && appErr.Details != nil {
@@ -120,6 +126,7 @@ func importFile(ctx context.Context, label, path string, importFn ingestion.Impo
 		"inserted", result.Inserted,
 		"skipped", result.Skipped,
 		"metersCreated", result.MetersCreated,
+		"metersRestored", result.MetersRestored,
 	)
 
 	return nil

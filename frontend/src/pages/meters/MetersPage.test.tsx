@@ -40,7 +40,7 @@ describe('MetersPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/meters');
+        await renderApp('/meters');
 
         const row = (await screen.findByText('M-109')).closest('tr')!;
         expect(within(row).getByText('Crítico')).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes());
         const user = userEvent.setup();
 
-        const router = renderApp('/meters');
+        const router = await renderApp('/meters');
         await screen.findByText('M-101');
 
         await user.click(screen.getByRole('button', {name: 'Crítico'}));
@@ -69,7 +69,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await screen.findByText('M-101');
         const requestsBefore = meterRequests(fetchMock).length;
 
@@ -85,7 +85,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await screen.findByText('M-101');
 
         await user.click(screen.getByRole('button', {name: 'Código'}));
@@ -100,7 +100,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes({'POST /meters': ok(created, 201)}));
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await screen.findByText('M-101');
 
         await user.click(screen.getByRole('button', {name: 'Nuevo medidor'}));
@@ -136,7 +136,7 @@ describe('MetersPage', () =>
         mockApi(routes({'POST /meters': apiError(409, 'METER_DUPLICATE_CODE')}));
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await screen.findByText('M-101');
 
         await user.click(screen.getByRole('button', {name: 'Nuevo medidor'}));
@@ -153,7 +153,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes({'PATCH /meters/m-109': ok({...meterPage().data[2], name: 'Compresores norte'})}));
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await user.click(await screen.findByRole('button', {name: 'Editar M-109'}));
 
         const dialog = screen.getByRole('dialog', {name: 'Editar medidor · M-109'});
@@ -174,7 +174,7 @@ describe('MetersPage', () =>
         const fetchMock = mockApi(routes({'DELETE /meters/m-104': {status: 204, reply: null}}));
         const user = userEvent.setup();
 
-        renderApp('/meters');
+        await renderApp('/meters');
         await user.click(await screen.findByRole('button', {name: 'Eliminar M-104'}));
 
         const dialog = screen.getByRole('dialog', {name: 'Eliminar M-104'});
@@ -191,9 +191,9 @@ describe('MetersPage', () =>
         mockApi(routes({'GET /meters/m-109': ok(meterPage().data[2])}));
         const user = userEvent.setup();
 
-        const router = renderApp('/meters');
+        const router = await renderApp('/meters');
         await user.click(await screen.findByText('Medidor M-109'));
 
-        expect(router.state.location.pathname).toBe('/meters/m-109');
+        await waitFor(() => expect(router.state.location.pathname).toBe('/meters/m-109'));
     });
 });

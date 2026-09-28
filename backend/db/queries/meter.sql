@@ -77,3 +77,16 @@ SELECT *
 FROM meter
 WHERE str_code_meter = $1
   AND dtm_deleted_at_meter IS NULL;
+
+-- name: RestoreMeterByCode :one
+-- Si llegan datos de un medidor eliminado (borrado lógico) se restaura el más reciente en vez de crear otro:
+-- así su historial de lecturas y anomalías sigue en un solo medidor.
+UPDATE meter
+SET dtm_deleted_at_meter = NULL
+WHERE uid_meter = (SELECT m.uid_meter
+                   FROM meter m
+                   WHERE m.str_code_meter = sqlc.arg('code')
+                     AND m.dtm_deleted_at_meter IS NOT NULL
+                   ORDER BY m.dtm_deleted_at_meter DESC
+                   LIMIT 1)
+RETURNING *;

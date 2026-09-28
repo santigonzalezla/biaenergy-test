@@ -20,6 +20,8 @@ const ERROR_MESSAGES: Record<string, string> = {
     INVALID_TOKEN: 'Tu sesión no es válida, vuelve a ingresar.',
     MISSING_TOKEN: 'Debes iniciar sesión para continuar.',
     VALIDATION_ERROR: 'Revisa los datos enviados.',
+    EMPTY_CSV: 'El archivo no tiene filas de datos.',
+    INVALID_FILE: 'No se pudo leer el archivo. Verifica que sea un CSV de máximo 10 MB.',
     METER_DUPLICATE_CODE: 'Ya existe un medidor con ese código.',
     METER_NOT_FOUND: 'El medidor no existe o fue eliminado.',
     ANOMALY_NOT_FOUND: 'La anomalía no existe.',

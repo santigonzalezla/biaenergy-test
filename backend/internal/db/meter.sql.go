@@ -218,6 +218,41 @@ func (q *Queries) ListMeters(ctx context.Context, arg ListMetersParams) ([]Meter
 	return items, nil
 }
 
+const restoreMeterByCode = `-- name: RestoreMeterByCode :one
+UPDATE meter
+SET dtm_deleted_at_meter = NULL
+WHERE uid_meter = (SELECT m.uid_meter
+                   FROM meter m
+                   WHERE m.str_code_meter = $1
+                     AND m.dtm_deleted_at_meter IS NOT NULL
+                   ORDER BY m.dtm_deleted_at_meter DESC
+                   LIMIT 1)
+RETURNING uid_meter, num_id_meter, str_code_meter, str_name_meter, str_location_meter, str_sector_meter, dec_nominal_voltage_meter, dec_max_current_meter, dec_contracted_power_kw_meter, str_status_meter, dtm_deleted_at_meter, dtm_created_at, dtm_updated_at
+`
+
+// Si llegan datos de un medidor eliminado (borrado lógico) se restaura el más reciente en vez de crear otro:
+// así su historial de lecturas y anomalías sigue en un solo medidor.
+func (q *Queries) RestoreMeterByCode(ctx context.Context, code string) (Meter, error) {
+	row := q.db.QueryRow(ctx, restoreMeterByCode, code)
+	var i Meter
+	err := row.Scan(
+		&i.UidMeter,
+		&i.NumIDMeter,
+		&i.StrCodeMeter,
+		&i.StrNameMeter,
+		&i.StrLocationMeter,
+		&i.StrSectorMeter,
+		&i.DecNominalVoltageMeter,
+		&i.DecMaxCurrentMeter,
+		&i.DecContractedPowerKwMeter,
+		&i.StrStatusMeter,
+		&i.DtmDeletedAtMeter,
+		&i.DtmCreatedAt,
+		&i.DtmUpdatedAt,
+	)
+	return i, err
+}
+
 const softDeleteMeter = `-- name: SoftDeleteMeter :execrows
 UPDATE meter
 SET dtm_deleted_at_meter = now()

@@ -49,25 +49,27 @@ func (q *Queries) GetLatestReadingTime(ctx context.Context, uidMeter uuid.UUID) 
 
 const insertReadings = `-- name: InsertReadings :execrows
 INSERT INTO reading (uid_meter, dtm_timestamp_reading, dec_consumption_kwh_reading, dec_voltage_reading,
-                     dec_current_reading, dec_power_factor_reading, str_status_reading)
+                     dec_current_reading, dec_power_factor_reading, str_status_reading, uid_import_batch)
 SELECT unnest($1::uuid[]),
        unnest($2::timestamptz[]),
        unnest($3::double precision[]),
        unnest($4::double precision[]),
        unnest($5::double precision[]),
        unnest($6::double precision[]),
-       unnest($7::text[])
+       unnest($7::text[]),
+       $8::uuid
 ON CONFLICT (uid_meter, dtm_timestamp_reading) DO NOTHING
 `
 
 type InsertReadingsParams struct {
-	MeterIds     []uuid.UUID
-	Timestamps   []time.Time
-	Consumptions []float64
-	Voltages     []float64
-	Currents     []float64
-	PowerFactors []float64
-	Statuses     []string
+	MeterIds      []uuid.UUID
+	Timestamps    []time.Time
+	Consumptions  []float64
+	Voltages      []float64
+	Currents      []float64
+	PowerFactors  []float64
+	Statuses      []string
+	ImportBatchID *uuid.UUID
 }
 
 // Inserción masiva: cada parámetro es un array (una "columna") y unnest los convierte en filas.
@@ -81,6 +83,7 @@ func (q *Queries) InsertReadings(ctx context.Context, arg InsertReadingsParams) 
 		arg.Currents,
 		arg.PowerFactors,
 		arg.Statuses,
+		arg.ImportBatchID,
 	)
 	if err != nil {
 		return 0, err

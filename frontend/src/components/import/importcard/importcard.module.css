@@ -1,0 +1,170 @@
+.format
+{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formatLabel
+{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.columns
+{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.columns code,
+.errors code
+{
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-muted);
+    font-family: var(--font-mono);
+    font-size: 12px;
+}
+
+.example
+{
+    display: block;
+    padding: 10px 12px;
+    overflow-x: auto;
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+    color: var(--text-secondary);
+}
+
+.success,
+.failure
+{
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--radius-md);
+}
+
+.success
+{
+    border: 1px solid var(--accent-border);
+    background: var(--accent-soft);
+}
+
+.failure
+{
+    border: 1px solid var(--anomaly-real-soft);
+    background: var(--anomaly-real-soft);
+}
+
+.outcomeTitle
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.success .outcomeTitle
+{
+    color: var(--accent-text);
+}
+
+.failure .outcomeTitle
+{
+    color: var(--anomaly-real-text);
+}
+
+.stats
+{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+
+.stats div
+{
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+}
+
+.stats dt
+{
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.stats dd
+{
+    margin: 2px 0 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.repeated
+{
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.repeated svg
+{
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.failureHint
+{
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.errors
+{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: var(--bg-surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.errors th,
+.errors td
+{
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-primary);
+    text-align: left;
+}
+
+.errors th
+{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+@media (max-width: 640px)
+{
+    .stats
+    {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}

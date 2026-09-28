@@ -1,0 +1,53 @@
+.page
+{
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.page > header
+{
+    margin-bottom: 0;
+}
+
+.banner
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.banner p
+{
+    flex: 1;
+}
+
+.grid
+{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 20px;
+}
+
+.note
+{
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+@media (max-width: 1100px)
+{
+    .grid
+    {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

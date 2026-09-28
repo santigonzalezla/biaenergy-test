@@ -1,0 +1,123 @@
+.zone
+{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 150px;
+    padding: 24px;
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    background: var(--bg-subtle);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.zone:hover,
+.zone:focus-within
+{
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.dragging
+{
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    transform: scale(1.01);
+}
+
+.disabled
+{
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.icon
+{
+    color: var(--accent-text);
+}
+
+.title
+{
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.title strong
+{
+    color: var(--accent-text);
+}
+
+.hint
+{
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.input
+{
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.selected
+{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-lg);
+    background: var(--accent-soft);
+}
+
+.fileIcon
+{
+    flex-shrink: 0;
+    color: var(--accent-text);
+}
+
+.fileInfo
+{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.fileName
+{
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.fileSize
+{
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.remove
+{
+    display: flex;
+    padding: 6px;
+    border: none;
+    border-radius: var(--radius-full);
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.remove:hover:not(:disabled)
+{
+    background: var(--bg-surface);
+    color: var(--anomaly-real-text);
+}

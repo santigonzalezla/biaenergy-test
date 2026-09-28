@@ -74,3 +74,17 @@ export const SortDirection = {
 } as const;
 
 export type SortDirection = typeof SortDirection[keyof typeof SortDirection];
+
+export const ImportKind = {
+    READINGS: 'READINGS',
+    EVENTS: 'EVENTS',
+} as const;
+
+export type ImportKind = typeof ImportKind[keyof typeof ImportKind];
+
+export const ImportStatus = {
+    COMPLETED: 'COMPLETED',
+    FAILED: 'FAILED',
+} as const;
+
+export type ImportStatus = typeof ImportStatus[keyof typeof ImportStatus];

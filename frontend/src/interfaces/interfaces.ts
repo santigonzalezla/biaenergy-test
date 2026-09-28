@@ -5,6 +5,8 @@ import type {
     AnomalyStatus,
     AnomalyType,
     EventType,
+    ImportKind,
+    ImportStatus,
     MeterSortField,
     MeterStatus,
     SortDirection,
@@ -274,10 +276,36 @@ export interface DashboardSummary {
 // ─── Importación ───
 
 export interface ImportResult {
+    batchId: string;
     rows: number;
     inserted: number;
     skipped: number;
     metersCreated: number;
+    metersRestored: number;
+    previouslyImportedAt: IsoDateTime | null;
+}
+
+export interface ImportBatch {
+    id: string;
+    numId: number;
+    kind: ImportKind;
+    status: ImportStatus;
+    fileName: string;
+    fileSize: number;
+    checksum: string;
+    rows: number;
+    inserted: number;
+    skipped: number;
+    metersCreated: number;
+    metersRestored: number;
+    errorCode: string | null;
+    error: string | null;
+    userName: string | null;
+    createdAt: IsoDateTime;
+}
+
+export interface ImportBatchList {
+    data: ImportBatch[];
 }
 
 export interface RowError {

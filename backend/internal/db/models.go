@@ -333,6 +333,122 @@ func AllEventTypeValues() []EventType {
 	}
 }
 
+type ImportKind string
+
+const (
+	ImportKindREADINGS ImportKind = "READINGS"
+	ImportKindEVENTS   ImportKind = "EVENTS"
+)
+
+func (e *ImportKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ImportKind(s)
+	case string:
+		*e = ImportKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ImportKind: %T", src)
+	}
+	return nil
+}
+
+type NullImportKind struct {
+	ImportKind ImportKind
+	Valid      bool // Valid is true if ImportKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullImportKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.ImportKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ImportKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullImportKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ImportKind), nil
+}
+
+func (e ImportKind) Valid() bool {
+	switch e {
+	case ImportKindREADINGS,
+		ImportKindEVENTS:
+		return true
+	}
+	return false
+}
+
+func AllImportKindValues() []ImportKind {
+	return []ImportKind{
+		ImportKindREADINGS,
+		ImportKindEVENTS,
+	}
+}
+
+type ImportStatus string
+
+const (
+	ImportStatusCOMPLETED ImportStatus = "COMPLETED"
+	ImportStatusFAILED    ImportStatus = "FAILED"
+)
+
+func (e *ImportStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ImportStatus(s)
+	case string:
+		*e = ImportStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ImportStatus: %T", src)
+	}
+	return nil
+}
+
+type NullImportStatus struct {
+	ImportStatus ImportStatus
+	Valid        bool // Valid is true if ImportStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullImportStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ImportStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ImportStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullImportStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ImportStatus), nil
+}
+
+func (e ImportStatus) Valid() bool {
+	switch e {
+	case ImportStatusCOMPLETED,
+		ImportStatusFAILED:
+		return true
+	}
+	return false
+}
+
+func AllImportStatusValues() []ImportStatus {
+	return []ImportStatus{
+		ImportStatusCOMPLETED,
+		ImportStatusFAILED,
+	}
+}
+
 type MeterStatus string
 
 const (
@@ -458,6 +574,26 @@ type Event struct {
 	StrDescriptionEvent string
 	DtmCreatedAt        time.Time
 	DtmUpdatedAt        time.Time
+	UidImportBatch      *uuid.UUID
+}
+
+type ImportBatch struct {
+	UidImportBatch               uuid.UUID
+	NumIDImportBatch             int32
+	StrKindImportBatch           ImportKind
+	StrStatusImportBatch         ImportStatus
+	StrFileNameImportBatch       string
+	NumFileSizeImportBatch       int64
+	StrChecksumImportBatch       string
+	NumRowsImportBatch           int32
+	NumInsertedImportBatch       int32
+	NumSkippedImportBatch        int32
+	NumMetersCreatedImportBatch  int32
+	NumMetersRestoredImportBatch int32
+	StrErrorCodeImportBatch      *string
+	StrErrorImportBatch          *string
+	UidUser                      *uuid.UUID
+	DtmCreatedAt                 time.Time
 }
 
 type Meter struct {
@@ -486,4 +622,5 @@ type Reading struct {
 	DecPowerFactorReading    float64
 	StrStatusReading         string
 	DtmCreatedAt             time.Time
+	UidImportBatch           *uuid.UUID
 }

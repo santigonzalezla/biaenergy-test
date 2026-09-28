@@ -26,7 +26,7 @@ describe('AnomalyDetailPage', () =>
     {
         mockApi(routes());
 
-        renderApp('/anomalies/a-109');
+        await renderApp('/anomalies/a-109');
 
         expect(await screen.findByRole('heading', {name: /M-109/})).toBeInTheDocument();
         expect(screen.getByText('44,1 → 92,8 kWh/h')).toBeInTheDocument();
@@ -53,7 +53,7 @@ describe('AnomalyDetailPage', () =>
     {
         mockApi(routes({'GET /anomalies/a-109': ok(anomalyDetail({status: 'RESOLVED', resolutionNote: 'Motor desconectado.'}))}));
 
-        renderApp('/anomalies/a-109');
+        await renderApp('/anomalies/a-109');
 
         expect(await screen.findByRole('button', {name: 'Reabrir'})).toBeInTheDocument();
         expect(screen.queryByRole('button', {name: 'Marcar como resuelta'})).not.toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('AnomalyDetailPage', () =>
         }));
         const user = userEvent.setup();
 
-        renderApp('/anomalies/a-109');
+        await renderApp('/anomalies/a-109');
 
         await user.type(await screen.findByRole('textbox', {name: /Nota/}), '  Técnico asignado a la nave C  ');
         await user.click(screen.getByRole('button', {name: 'Marcar en investigación'}));
@@ -86,7 +86,7 @@ describe('AnomalyDetailPage', () =>
         mockApi(routes());
         const user = userEvent.setup();
 
-        renderApp('/anomalies/a-109');
+        await renderApp('/anomalies/a-109');
 
         const note = await screen.findByRole('textbox', {name: /Nota/});
         await user.click(note);
@@ -101,7 +101,7 @@ describe('AnomalyDetailPage', () =>
         mockApi(routes({'PATCH /anomalies/a-109/status': apiError(409, 'INVALID_STATUS_TRANSITION')}));
         const user = userEvent.setup();
 
-        renderApp('/anomalies/a-109');
+        await renderApp('/anomalies/a-109');
 
         await user.click(await screen.findByRole('button', {name: 'Descartar'}));
 
@@ -113,7 +113,7 @@ describe('AnomalyDetailPage', () =>
     {
         mockApi(routes({'GET /anomalies/nope': apiError(404, 'ANOMALY_NOT_FOUND')}));
 
-        renderApp('/anomalies/nope');
+        await renderApp('/anomalies/nope');
 
         expect(await screen.findByText('Anomalía no encontrada')).toBeInTheDocument();
         expect(screen.getByRole('link', {name: /Volver a anomalías/})).toHaveAttribute('href', '/anomalies');
