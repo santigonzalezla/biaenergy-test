@@ -1,0 +1,102 @@
+.workflow
+{
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.current
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.noteField
+{
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.noteLabel
+{
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.noteField textarea
+{
+    width: 100%;
+    padding: 10px 12px 24px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg-surface);
+    font-size: 13px;
+    resize: vertical;
+}
+
+.noteField textarea:focus
+{
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+.noteField textarea[aria-invalid='true']
+{
+    border-color: var(--anomaly-real);
+}
+
+.counter
+{
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.over
+{
+    font-weight: 700;
+    color: var(--anomaly-real-text);
+}
+
+.actions
+{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.savedNote
+{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--bg-subtle);
+}
+
+.savedNote span
+{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.savedNote p
+{
+    font-size: 13px;
+    color: var(--text-secondary);
+}

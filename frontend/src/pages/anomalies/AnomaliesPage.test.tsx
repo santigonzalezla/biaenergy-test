@@ -41,16 +41,16 @@ describe('AnomaliesPage', () =>
         expect(within(first).getByRole('link', {name: 'Investigar anomalía de M-109'})).toHaveAttribute('href', '/anomalies/a-109');
     });
 
-    it('shows how many anomalies there are of each type in the filters', async () =>
+    it('shows how many anomalies there are of each option in the filters', async () =>
     {
         mockApi(routes());
 
         renderApp('/anomalies');
 
-        const typeFilter = await screen.findByRole('group', {name: 'Tipo'});
-        expect(within(typeFilter).getByRole('button', {name: 'Anomalía real (1)'})).toBeInTheDocument();
-        expect(within(typeFilter).getByRole('button', {name: 'Explicable (0)'})).toBeInTheDocument();
-        expect(within(screen.getByRole('group', {name: 'Severidad'})).getByRole('button', {name: 'Alta (2)'})).toBeInTheDocument();
+        const typeFilter = await screen.findByRole('combobox', {name: 'Tipo'});
+        expect(within(typeFilter).getByRole('option', {name: 'Anomalía real (1)'})).toBeInTheDocument();
+        expect(within(typeFilter).getByRole('option', {name: 'Explicable (0)'})).toBeInTheDocument();
+        expect(within(screen.getByRole('combobox', {name: 'Severidad'})).getByRole('option', {name: 'Alta (2)'})).toBeInTheDocument();
     });
 
     it('filters through the URL and keeps the original rank', async () =>
@@ -59,15 +59,19 @@ describe('AnomaliesPage', () =>
         const user = userEvent.setup();
 
         const router = renderApp('/anomalies');
-        const typeFilter = await screen.findByRole('group', {name: 'Tipo'});
 
-        await user.click(within(typeFilter).getByRole('button', {name: 'Falso positivo (1)'}));
+        await user.selectOptions(await screen.findByRole('combobox', {name: 'Tipo'}), 'FALSE_POSITIVE');
 
         expect(router.state.location.search).toBe('?type=FALSE_POSITIVE');
         expect(cards()).toHaveLength(1);
         expect(within(cards()[0]).getByText('M-106')).toBeInTheDocument();
         expect(within(cards()[0]).getByText('#3')).toBeInTheDocument();
         expect(screen.getByText('1 de 3 anomalías')).toBeInTheDocument();
+
+        await user.selectOptions(screen.getByRole('combobox', {name: 'Tipo'}), '');
+
+        expect(router.state.location.search).toBe('');
+        expect(cards()).toHaveLength(3);
     });
 
     it('opens with the filters of the URL and can clear them when nothing matches', async () =>
@@ -78,8 +82,9 @@ describe('AnomaliesPage', () =>
         renderApp('/anomalies?type=EXPLAINABLE_ANOMALY&severity=HIGH');
 
         expect(await screen.findByText('Ninguna anomalía coincide con los filtros')).toBeInTheDocument();
+        expect(screen.getByRole('combobox', {name: 'Tipo'})).toHaveValue('EXPLAINABLE_ANOMALY');
 
-        await user.click(screen.getByRole('button', {name: 'Limpiar filtros'}));
+        await user.click(screen.getAllByRole('button', {name: 'Limpiar filtros'})[0]);
 
         expect(cards()).toHaveLength(3);
     });

@@ -12,8 +12,24 @@
 
 .filters
 {
-    gap: 12px;
-    padding: 18px 20px;
+    padding: 16px 20px;
+}
+
+.filterRow
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 16px;
+}
+
+.filterSummary
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    margin-left: auto;
 }
 
 .count

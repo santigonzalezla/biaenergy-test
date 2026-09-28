@@ -6,7 +6,7 @@ import AnomalyCard from '@/components/anomalies/anomalycard/AnomalyCard.tsx';
 import RunAnalysisButton from '@/components/analysis/runanalysisbutton/RunAnalysisButton.tsx';
 import Button from '@/components/shared/button/Button.tsx';
 import Card from '@/components/shared/card/Card.tsx';
-import FilterPills, {type FilterOption} from '@/components/shared/filterpills/FilterPills.tsx';
+import FilterSelect, {type FilterOption} from '@/components/shared/filterselect/FilterSelect.tsx';
 import PageHeader from '@/components/shared/pageheader/PageHeader.tsx';
 import Skeleton from '@/components/shared/skeleton/Skeleton.tsx';
 import StateMessage from '@/components/shared/statemessage/StateMessage.tsx';
@@ -65,6 +65,8 @@ const AnomaliesPage = () =>
         }, {replace: true});
     }
 
+    const clearFilters = () => setParams({}, {replace: true});
+
     const all = anomalies.data?.data ?? [];
     const visible = all.filter(anomaly =>
         (!type || anomaly.type === type) && (!severity || anomaly.severity === severity) && (!status || anomaly.status === status));
@@ -104,14 +106,18 @@ const AnomaliesPage = () =>
             {anomalies.data && all.length > 0 && (
                 <>
                     <Card className={styles.filters}>
-                        <FilterPills label='Tipo' options={optionsFor(ANOMALY_TYPE, all, 'type')} selected={type} onChange={value => setFilter('type', value)}/>
-                        <FilterPills label='Severidad' options={optionsFor(SEVERITY, all, 'severity')} selected={severity} onChange={value => setFilter('severity', value)}/>
-                        <FilterPills label='Estado' options={optionsFor(ANOMALY_STATUS, all, 'status')} selected={status} onChange={value => setFilter('status', value)}/>
+                        <div className={styles.filterRow}>
+                            <FilterSelect label='Tipo' options={optionsFor(ANOMALY_TYPE, all, 'type')} selected={type} onChange={value => setFilter('type', value)}/>
+                            <FilterSelect label='Severidad' options={optionsFor(SEVERITY, all, 'severity')} selected={severity} onChange={value => setFilter('severity', value)}/>
+                            <FilterSelect label='Estado' options={optionsFor(ANOMALY_STATUS, all, 'status')} selected={status} onChange={value => setFilter('status', value)}/>
+                            <div className={styles.filterSummary}>
+                                <p className={styles.count} aria-live='polite'>
+                                    {visible.length === all.length ? `${all.length} anomalías` : `${visible.length} de ${all.length} anomalías`}
+                                </p>
+                                {hasFilters && <Button size='sm' variant='ghost' onClick={clearFilters}>Limpiar filtros</Button>}
+                            </div>
+                        </div>
                     </Card>
-
-                    <p className={styles.count} aria-live='polite'>
-                        {visible.length === all.length ? `${all.length} anomalías` : `${visible.length} de ${all.length} anomalías`}
-                    </p>
 
                     {visible.length === 0
                         ? (
@@ -119,7 +125,7 @@ const AnomaliesPage = () =>
                                 <StateMessage
                                     icon={FilterX}
                                     title='Ninguna anomalía coincide con los filtros'
-                                    action={hasFilters && <Button size='sm' onClick={() => setParams({}, {replace: true})}>Limpiar filtros</Button>}
+                                    action={hasFilters && <Button size='sm' onClick={clearFilters}>Limpiar filtros</Button>}
                                 />
                             </Card>
                         )

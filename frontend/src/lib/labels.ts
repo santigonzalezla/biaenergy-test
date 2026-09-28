@@ -47,6 +47,45 @@ export const ANALYSIS_STEP: Record<AnalysisStep, string> = {
     completed: 'Completado',
 };
 
+export const ALLOWED_TRANSITIONS: Record<AnomalyStatus, AnomalyStatus[]> = {
+    OPEN: ['INVESTIGATING', 'RESOLVED', 'DISMISSED'],
+    INVESTIGATING: ['OPEN', 'RESOLVED', 'DISMISSED'],
+    RESOLVED: ['OPEN'],
+    DISMISSED: ['OPEN'],
+};
+
+export const TRANSITION_ACTION: Record<AnomalyStatus, string> = {
+    OPEN: 'Reabrir',
+    INVESTIGATING: 'Marcar en investigación',
+    RESOLVED: 'Marcar como resuelta',
+    DISMISSED: 'Descartar',
+};
+
+export const SIGNAL_KIND: Record<string, string> = {
+    CONSUMPTION_SURGE: 'Aumento sostenido de consumo',
+    CONSUMPTION_DROP: 'Caída sostenida de consumo',
+    VOLTAGE_OUT_OF_RANGE: 'Voltaje fuera de rango (±5 %)',
+    VOLTAGE_INSTABILITY: 'Inestabilidad de voltaje',
+    LOW_POWER_FACTOR: 'Factor de potencia bajo (< 0,80)',
+    OVERCURRENT: 'Sobrecorriente (> 1,5 × pico previo)',
+};
+
+export interface VariableLabel {
+    label: string;
+    unit: string;
+    digits: number;
+}
+
+export const VARIABLE: Record<string, VariableLabel> = {
+    consumption_kwh: {label: 'Consumo', unit: 'kWh/h', digits: 1},
+    voltage: {label: 'Voltaje', unit: 'V', digits: 1},
+    voltage_step: {label: 'Salto de voltaje', unit: 'V', digits: 1},
+    power_factor: {label: 'Factor de potencia', unit: '', digits: 2},
+    current: {label: 'Corriente', unit: 'A', digits: 0},
+};
+
+export const variableOf = (name: string): VariableLabel => VARIABLE[name] ?? {label: name, unit: '', digits: 2};
+
 export const EVENT_TYPE: Record<EventType, string> = {
     OPERATIONAL_CHANGE: 'Cambio operativo',
     SCHEDULED_OUTAGE: 'Corte programado',

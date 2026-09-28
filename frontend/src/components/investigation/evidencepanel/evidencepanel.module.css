@@ -1,0 +1,108 @@
+.panel
+{
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.subtitle
+{
+    margin-bottom: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.signals
+{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.signal
+{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-subtle);
+}
+
+.signalHeader
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.since
+{
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.values
+{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    color: var(--text-secondary);
+}
+
+.values strong
+{
+    color: var(--anomaly-real-text);
+}
+
+.description
+{
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.table
+{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.table th,
+.table td
+{
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-primary);
+    text-align: left;
+}
+
+.table thead th
+{
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.table tbody th
+{
+    font-weight: 600;
+}
+
+.strong
+{
+    font-weight: 700;
+    color: var(--anomaly-real-text);
+}

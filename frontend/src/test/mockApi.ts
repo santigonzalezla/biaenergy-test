@@ -1,4 +1,10 @@
-type Reply = unknown | ((request: {method: string; path: string; body: unknown}) => unknown);
+export interface MockRequest {
+    method: string;
+    path: string;
+    body: unknown;
+}
+
+type Reply = ((request: MockRequest) => unknown) | object | null;
 
 export interface MockRoute {
     status?: number;
