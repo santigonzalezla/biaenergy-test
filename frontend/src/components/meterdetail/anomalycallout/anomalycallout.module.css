@@ -1,0 +1,115 @@
+.callout
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 1px solid var(--border-primary);
+    border-left-width: 4px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+}
+
+.real
+{
+    border-color: var(--anomaly-real-soft);
+    border-left-color: var(--anomaly-real);
+    background: color-mix(in srgb, var(--anomaly-real-soft) 50%, var(--bg-surface));
+}
+
+.explainable
+{
+    border-color: var(--anomaly-explainable-soft);
+    border-left-color: var(--anomaly-explainable);
+    background: color-mix(in srgb, var(--anomaly-explainable-soft) 50%, var(--bg-surface));
+}
+
+.dataQuality
+{
+    border-color: var(--anomaly-data-quality-soft);
+    border-left-color: var(--anomaly-data-quality);
+    background: color-mix(in srgb, var(--anomaly-data-quality-soft) 50%, var(--bg-surface));
+}
+
+.falsePositive
+{
+    border-left-color: var(--anomaly-false-positive);
+}
+
+.icon
+{
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+}
+
+.real .icon
+{
+    color: var(--anomaly-real-text);
+}
+
+.explainable .icon
+{
+    color: var(--anomaly-explainable-text);
+}
+
+.dataQuality .icon
+{
+    color: var(--anomaly-data-quality-text);
+}
+
+.content
+{
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 260px;
+}
+
+.heading
+{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.since
+{
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.reason
+{
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-secondary);
+}
+
+.link
+{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-full);
+    background: var(--bg-surface);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.link:hover
+{
+    background: var(--bg-hover);
+}

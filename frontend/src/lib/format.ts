@@ -23,7 +23,11 @@ const shortDateTime = new Intl.DateTimeFormat(LOCALE, {
     timeZone: APP_TIMEZONE,
 });
 
-export const formatNumber = (value: number, digits: number = 0) => decimal(digits).format(value);
+const dayMonth = new Intl.DateTimeFormat(LOCALE, {day: 'numeric', month: 'short', timeZone: APP_TIMEZONE});
+
+export const formatDayMonth = (value: string | number) => dayMonth.format(new Date(value));
+
+export const formatNumber =(value: number, digits: number = 0) => decimal(digits).format(value);
 
 export const formatKwh = (value: number, digits: number = 2) => `${formatNumber(value, digits)} kWh`;
 

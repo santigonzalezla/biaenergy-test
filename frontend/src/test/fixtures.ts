@@ -1,5 +1,5 @@
 import type {Session} from '@/interfaces/auth.ts';
-import type {Analysis, AnomalyList, DashboardSummary, Meter, Page} from '@/interfaces/interfaces.ts';
+import type {Analysis, AnomalyDetail, AnomalyList, DashboardSummary, Meter, Page, Reading, Series} from '@/interfaces/interfaces.ts';
 import {saveSession} from '@/lib/session.ts';
 
 export const ADMIN = {id: 'f90768ae-b4ed-425e-bdbd-918714c97484', email: 'admin@bia.app', name: 'Admin BIA'};
@@ -82,6 +82,58 @@ const meter = (code: string, status: Meter['status'], variationPct: number): Met
     createdAt: '2026-09-25T06:08:53Z',
     updatedAt: '2026-09-27T22:13:30Z',
     stats: {baselineKwh: 43.7, recentKwh: 43.7 * (1 + variationPct / 100), variationPct, minPowerFactor: 0.9, totalKwh: 17000, lastReadingAt: '2026-09-15T04:00:00Z'},
+});
+
+export const CHANGE_AT = '2026-09-12T19:00:00Z';
+
+export const readingSeries = (): Series<Reading> =>
+{
+    const start = Date.parse('2026-09-01T05:00:00Z');
+    const change = Date.parse(CHANGE_AT);
+
+    const data = Array.from({length: 14 * 24}, (_, hour) =>
+    {
+        const time = start + hour * 3_600_000;
+        const after = time >= change;
+
+        return {
+            timestamp: new Date(time).toISOString(),
+            consumptionKwh: after ? 92 : 44,
+            voltage: after ? 214 : 221,
+            current: after ? 485 : 242,
+            powerFactor: after ? 0.74 : 0.94,
+            status: 'OK',
+        };
+    });
+
+    return {from: '2026-09-01T05:00:00Z', to: '2026-09-15T05:00:00Z', data};
+}
+
+export const anomalyDetail = (overrides: Partial<AnomalyDetail> = {}): AnomalyDetail => ({
+    ...anomalyList().data[0],
+    analysisId: analysis().id,
+    meter: {id: 'm-109', code: 'M-109', name: 'Medidor M-109', location: ''},
+    baselineKwh: 44.07,
+    currentKwh: 92.77,
+    windowStart: CHANGE_AT,
+    windowEnd: null,
+    recommendedAction: 'Revisar físicamente los equipos conectados a este medidor.',
+    changedVariables: ['consumption_kwh', 'power_factor', 'current'],
+    evidence: {
+        signals: [
+            {kind: 'CONSUMPTION_SURGE', startedAt: CHANGE_AT, endedAt: null, magnitude: 1.17, baselineValue: 42.38, observedValue: 91.92, description: 'Aumento sostenido del consumo'},
+            {kind: 'LOW_POWER_FACTOR', startedAt: CHANGE_AT, endedAt: null, magnitude: 0.2, baselineValue: 0.94, observedValue: 0.74, description: 'Factor de potencia bajo 0,80'},
+        ],
+        changedVariables: [
+            {name: 'consumption_kwh', baseline: 42.38, observed: 91.92, changePct: 116.9},
+            {name: 'power_factor', baseline: 0.94, observed: 0.74, changePct: -21.3},
+        ],
+        relatedEvent: {id: 'e-1', type: 'UNKNOWN', timestamp: CHANGE_AT, description: 'No operational event reported'},
+    },
+    relatedEvent: {id: 'e-1', type: 'UNKNOWN', timestamp: CHANGE_AT, description: 'No operational event reported'},
+    resolutionNote: null,
+    updatedAt: '2026-09-27T22:13:30Z',
+    ...overrides,
 });
 
 export const meterPage = (): Page<Meter> => ({
